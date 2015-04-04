@@ -23,7 +23,7 @@ in RFC 6265 @cite["RFC6265"].
   @racketmodname[net/cookies/user-agent].
 
   The @racketmodname[net/cookies/server] and
-  @racketmodname[net/cookies/user-agent] are each designed to stand on
+  @racketmodname[net/cookies/user-agent] modules are designed to stand on
   their own, however, so for any program that is exclusively client- or
   server-side, it will suffice to import one of those two modules.
 }
@@ -84,7 +84,7 @@ name, as defined by RFCs 1034 (Section 3.5) @cite["RFC1034"] and 1123
 @section[#:tag "cookies-server-procs"]{Cookies and HTTP Servers}
 
 @defmodule[net/cookies/server]{The @racketmodname[net/cookies/server] library
-is for handling cookies on the server end; it includes:
+is for handling cookies on the server side; it includes:
 @itemlist[@item{a serializable @racket[cookie] structure definition}
            @item{functions to convert a cookie structure to a string, or
                  a value for the HTTP ``Set-Cookie'' response header}
@@ -236,7 +236,7 @@ HttpOnly} for more info.)
   @racketmodname[net/cookies/user-agent] library provides facilities
   specific to user agents' handling of cookies.
 
-  Many user agents will need only two of this library's functions:
+  Many user agents will need only two of this library's procedures:
   @itemlist[@item{@racket[extract-and-save-cookies!], for storing cookies}
             @item{@racket[cookie-header], for retrieving them and
                   generating a ``Cookie:'' header}]
