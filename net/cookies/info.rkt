@@ -1,5 +1,4 @@
 #lang info
 
-(define name "Cookies")
+(define name "HTTP Cookies (RFC6265)")
 (define scribblings '(("cookies.scrbl" ())))
-

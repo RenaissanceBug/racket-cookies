@@ -1,13 +1,10 @@
 #lang scribble/doc
 
-@(require "common.rkt" scribble/manual scribble/eval
-          (for-label racket/class
-                     net/cookies/server
-                     net/cookies/user-agent
-                     net/url
-                     net/head
-                     web-server/http/request-structs
-                     ))
+@(require scribble/manual scribble/eval
+          (for-label "common.rkt" "server.rkt" "user-agent.rkt"
+                     racket/class
+                     net/url net/head
+                     web-server/http/request-structs))
 
 @(define cookies-server-eval (make-base-eval))
 @interaction-eval[#:eval cookies-server-eval
@@ -467,3 +464,28 @@ cookie-construction tests for this library are adapted from the
 client-side cookie library on which this user-agent library is based.
 In particular, this library relies on his code for parsing dates and
 other cookie components.
+
+@; ------------------------------------------
+
+@(bibliography
+  (bib-entry #:key "RFC1034"
+             #:title "Domain Names - Concepts and Facilities"
+             #:author "P. Mockapetris"
+             #:location "RFC"
+             #:url "http://tools.ietf.org/html/rfc1034.html"
+             #:date "1987")
+  
+  (bib-entry #:key "RFC1123"
+             #:title "Requirements for Internet Hosts - Application and Support"
+             #:author "R. Braden (editor)"
+             #:location "RFC"
+             #:url "http://tools.ietf.org/html/rfc1123.html"
+             #:date "1989")
+  
+  (bib-entry #:key "RFC6265"
+             #:title "HTTP State Management Mechanism"
+             #:author "A. Barth"
+             #:location "RFC"
+             #:url "http://tools.ietf.org/html/rfc6265.html"
+             #:date "2011")
+  )
