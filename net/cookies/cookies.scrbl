@@ -424,7 +424,7 @@ HttpOnly} for more info.)
  Given a single ``Set-Cookie'' header's value 
  @racket[set-cookie-bytes] received in response to a request
  from the given @racket[url], produces a @racket[ua-cookie]
- representing the cookie received.
+ representing the cookie received, or @racket[#f] if @racket[set-cookie-bytes] can't be parsed as a cookie.
 
  The @racket[decode] function is used to convert the cookie's
  textual fields (@racket[name], @racket[value], @racket[domain],
