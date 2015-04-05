@@ -60,7 +60,7 @@
                  url?)
                 ((-> bytes? string?))
                 (listof ua-cookie?))]
-          [parse-cookie (-> bytes? url? (or/c ua-cookie? #f))]
+          [parse-cookie (-> (bytes? url?) ((-> bytes? string?)) (or/c ua-cookie? #f))]
 
           [default-path (-> url? string?)]
 
@@ -108,7 +108,6 @@
 
 (define cookie-jar<%>
   (interface ()
-    ; TODO: Modify the below to take optional URL
     [save-cookie!  (->*m (ua-cookie?)          (boolean?) void?)]
     [save-cookies! (->*m ((listof ua-cookie?)) (boolean?) void?)]
     [cookies-matching (->m url? (listof ua-cookie?))]))
@@ -185,7 +184,7 @@
 
 ;; given a list of all the headers received in a response,
 ;; produce a list of cookies corresponding to all the Set-Cookie headers
-;; present. TODO: tests
+;; present.
 (define (extract-cookies headers url [decode bytes->string/utf-8])
   (define (set-cookie? x) (string-ci=? (decode x) "set-cookie"))
   (define (header->maybe-cookie hdr)
