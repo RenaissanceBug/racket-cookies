@@ -420,7 +420,7 @@ HttpOnly} for more info.)
 @defproc[(parse-cookie [set-cookie-bytes bytes?]
                        [url url?]
                        [decode (-> bytes? string?) bytes->string/utf-8])
-         ua-cookie?]{
+         (or/c ua-cookie? #f)]{
  Given a single ``Set-Cookie'' header's value 
  @racket[set-cookie-bytes] received in response to a request
  from the given @racket[url], produces a @racket[ua-cookie]
