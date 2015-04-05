@@ -5,4 +5,4 @@
 (define deps '("srfi-lite-lib" "base"))
 
 (define build-deps
-  '("racket-doc" "scribble-lib" "net-doc" "srfi-doc" "web-server-doc"))
+  '("rackunit-lib" "web-server-lib" "racket-doc" "scribble-lib" "net-doc" "srfi-doc" "web-server-doc"))
