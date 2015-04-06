@@ -60,7 +60,7 @@
                  url?)
                 ((-> bytes? string?))
                 (listof ua-cookie?))]
-          [parse-cookie (-> (bytes? url?) ((-> bytes? string?)) (or/c ua-cookie? #f))]
+          [parse-cookie (->* (bytes? url?) ((-> bytes? string?)) (or/c ua-cookie? #f))]
 
           [default-path (-> url? string?)]
 
