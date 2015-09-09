@@ -37,7 +37,8 @@
                              [http-only?      boolean?]))
 
           [extract-and-save-cookies!
-           (->* ((listof (cons/c bytes? bytes?))
+           (->* ((or/c (listof (cons/c bytes? bytes?))
+                       (listof bytes?))
                  url?)
                 ((-> bytes? string?))
                void?)]
@@ -55,7 +56,8 @@
                      (->*m (url?) (boolean?) (listof ua-cookie?))])]
 
           [extract-cookies
-           (->* ((listof (cons/c bytes? bytes?))
+           (->* ((or/c (listof (cons/c bytes? bytes?))
+                       (listof bytes?))
                  ;(listof (or/c header? (cons/c bytes? bytes?)))
                  url?)
                 ((-> bytes? string?))
@@ -190,6 +192,9 @@
   (define (header->maybe-cookie hdr)
     (match hdr
       [(cons (? set-cookie?) value) value]
+      [(? bytes?)
+       (define pair/f (regexp-match #rx"^(?i:set-cookie): *(.*)$" hdr))
+       (and pair/f (cadr pair/f))]
       ;[(header (? set-cookie?) value) value]
       [_ #f]))
   (filter (lambda (x) x)

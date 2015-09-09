@@ -3,7 +3,7 @@
 @(require scribble/manual scribble/eval
           (for-label "common.rkt" "server.rkt" "user-agent.rkt"
                      racket/class
-                     net/url net/head
+                     net/url net/head net/http-client
                      web-server/http/request-structs))
 
 @(define cookies-server-eval (make-base-eval))
@@ -277,7 +277,7 @@ HttpOnly} for more info.)
 @subsection[#:tag "cookies-client-jar"]{Cookie jars: Client storage}
 
 @defproc[(extract-and-save-cookies!
-           [headers (listof (or/c header? (cons/c bytes? bytes?)))]
+           [headers (or/c (listof (cons/c bytes? bytes?)) (listof bytes?))]
            [url url?]
            [decode (-> bytes? string?) bytes->string/utf-8])
          void?]{
@@ -285,6 +285,11 @@ HttpOnly} for more info.)
   @racket[headers] received in an HTTP response from @racket[url],
   converts them to strings using @racket[decode], and stores them
   in the @racket[current-cookie-jar].
+
+  The given @racket[headers] may be provided either as an alist mapping header
+  names to header values, or as a raw list of bytes such as the second return
+  value produced by @racket[http-conn-recv!] in @racketmodname[net/http-client].
+  Here is an example of each:
 
   @examples[#:eval cookies-ua-eval
             (require net/url)
@@ -294,6 +299,12 @@ HttpOnly} for more info.)
              '((#"X-Test-Header" . #"isThisACookie=no")
                (#"Set-Cookie" . #"a=b; Max-Age=2000; Path=/")
                (#"Set-Cookie" . #"user=bob; Max-Age=86400; Path=/apps"))
+             site-url)
+            (cookie-header site-url)
+            (extract-and-save-cookies!
+             '(#"X-Ignore-This: thisIsStillNotACookie=yes"
+               #"Set-Cookie: p=q; Max-Age=2000; Path=/"
+               #"Set-Cookie: usersMom=alice; Max-Age=86400; Path=/apps")
              site-url)
             (cookie-header site-url)]
 }
@@ -400,7 +411,8 @@ HttpOnly} for more info.)
 
 @subsection[#:tag "cookies-client-parsing"]{Reading the Set-Cookie header}
 
-@defproc[(extract-cookies [headers (listof (or/c header? (cons/c bytes? bytes?)))]
+@defproc[(extract-cookies [headers (or/c (listof (cons/c bytes? bytes?))
+                                         (listof bytes?))]
                           [url url?]
                           [decode (-> bytes? string?)
                                   bytes->string/utf-8])
@@ -409,7 +421,11 @@ HttpOnly} for more info.)
  a request from the given @racket[url], produces a list of
  cookies corresponding to all the ``Set-Cookie'' headers
  present. The @racket[decode] function is used to convert the cookie's
- textual fields to strings.
+ fields to strings.
+
+ The given @racket[headers] may be provided either as an alist mapping header
+ names to header values, or as a raw list of bytes such as the second return
+ value produced by @racket[http-conn-recv!] in @racketmodname[net/http-client].
 
  This function is suitable for use with the @racket[headers/raw]
  field of a @racket[request] structure (from

@@ -50,7 +50,9 @@
 (module+ main
   (require rackunit/text-ui)
   (run-tests extract-cookies-tests)
+  (run-tests extract-cookies-bytes-tests)
   (run-tests cookie-jar-tests)
+  (run-tests cookie-jar-bytes-test)
   (run-tests cookie-saving-tests)
   (run-tests default-path-tests)
   (run-tests date-parsing-tests1)
@@ -138,8 +140,59 @@
                 example-url)
                '()))
 
+(define-test-suite extract-cookies-bytes-tests
+  (test-header "bytes: extract cookie with no exp-time or options"
+               '(#"Set-Cookie: foo=bar")
+               example-url
+               (ua-cookie "foo" "bar" "example.com" "/" 1 1 1 #f #t #f #f))
+  (test-header "extract cookie with max-age only"
+               '(#"Set-Cookie: foo=bar; Max-Age=51")
+               example-url
+               (ua-cookie "foo" "bar" "example.com" "/" 1 1 1 #t #t #f #f)
+               51)
+  (test-header "extract cookie with max-age and domain"
+               '(#"Set-Cookie: foo=bar; Max-Age=52; Domain=example.com")
+               example-url
+               (ua-cookie "foo" "bar" "example.com" "/" 1 1 1 #t #f #f #f)
+               52)
+  (test-header "extract cookie with max-age, secure, domain"
+               '(#"Set-Cookie: foo=bar; Max-Age=53; Secure; Domain=example.com")
+               example-url
+               (ua-cookie "foo" "bar" "example.com" "/" 1 1 1 #t #f #t #f)
+               53)
+  (test-header "extract cookie with httponly, domain"
+               '(#"Set-Cookie: foo=bar; httpOnly; Domain=example.com")
+               example-url
+               (ua-cookie "foo" "bar" "example.com" "/" 1 1 1 #f #f #f #t))
+  (test-header "extract cookie with path"
+               '(#"Set-Cookie: foo=bar; Path=/abc/def")
+               example-url
+               (ua-cookie "foo" "bar" "example.com" "/abc/def" 1 1 1 #f #t #f #f))
+  (test-header "extract cookie with domain, path"
+               '(#"Set-Cookie: foo=bar; Domain=test.example.com; Path=/abc/de/f")
+               test-example-url
+               (ua-cookie "foo" "bar" "test.example.com" "/abc/de/f" 1 1 1
+                          #f #f #f #f))
+  (test-header "extract cookie -- use last domain given (1)"
+               '(#"Set-Cookie: foo=bar; Domain=test.example.com; Domain=example.com")
+               test-example-url
+               (ua-cookie "foo" "bar" "example.com" "/" 1 1 1 #f #f #f #f))
+  (test-header "extract cookie -- use last domain given (2)"
+               '(#"Set-Cookie: foo=bar; Domain=example.com; Domain=test.example.com;")
+               test-example-url
+               (ua-cookie "foo" "bar" "test.example.com" "/" 1 1 1 #f #f #f #f))
+  
+  (test-equal? "cookies that should be ignored"
+               (extract-cookies
+                '(#"Set-Cookie: foo=bar; Domain=foo.com"          ; wrong dom
+                  #"Set-Cookie: foo=bar; Domain=test.example.com" ; subdom
+                  #"Set-Cookie: foo=bar; Domain=test.example.com; Path=/abc/de/f") ;subdom
+                example-url)
+               '()))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Cookie jars: Storing & Retrieving, Generating Headers
+
 
 (define-test-suite cookie-jar-tests
   (parameterize ([current-cookie-jar (new list-cookie-jar%)])
@@ -240,6 +293,29 @@
     (test-equal? "save-cookie!: non-HTTP cookie can't replace an HTTPOnly one"
                  (cookie-header example-url)
                  #"okToReplace=NO")))
+
+;; The first of the above tests, but using byte-string headers instead of pairs:
+(define-test-suite cookie-jar-bytes-test
+  (parameterize ([current-cookie-jar (new list-cookie-jar%)])
+    (define now (current-seconds))
+    (extract-and-save-cookies!
+     '(#"X-Test-Header: ignore this header"
+       #"Set-Cookie: a=b; Max-Age=2000; Path=/"
+       #"Another-Dummy: another value to ignore"
+       ; This next one won't get saved:
+       #"Set-Cookie: c=d; Max-Age=3; Domain=example.com; Path=/x/y"
+       #"Set-Cookie: user=bob; Max-Age=4; Path=/x")
+     test.example.com/x/y)
+    (test-equal? "cookie-header: one match"
+                 (cookie-header test-example-url) ; sic, NOT -url3
+                 #"a=b")
+    (test-equal? "cookie-header: one match (via domain & path)"
+                 (cookie-header example.com/x/y/z)
+                 #"c=d")
+    (test-equal? "cookie-header: multiple matches"
+                 (cookie-header test.example.com/x/y/z)
+                 #"c=d; user=bob; a=b")
+    ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Cookies used in subsequent tests:
