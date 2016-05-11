@@ -406,10 +406,11 @@
 ;; domain is the "domain string", and host is the string being tested.
 (define (domain-match? domain host)
   (define diff (- (string-length host) (string-length domain)))
-  (and (diff . >= . 0)
-       (string=? domain (substring host diff))
-       (or (= diff 0) (char=? (string-ref host (sub1 diff)) #\.))
-       (not (regexp-match #px"\\.\\d\\d?\\d?$" host))))
+  (or (string=? (string-downcase domain) (string-downcase host))
+      (and (diff . >= . 0)
+           (string=? domain (substring host diff))
+           (or (= diff 0) (char=? (string-ref host (sub1 diff)) #\.))
+           (not (regexp-match #px"\\.\\d\\d?\\d?$" host)))))
 
 ;;;; As spec'd in section 5.1.4:
 
