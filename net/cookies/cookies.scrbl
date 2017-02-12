@@ -2,6 +2,7 @@
 
 @(require scribble/manual scribble/eval
           (for-label "common.rkt" "server.rkt" "user-agent.rkt"
+                     racket/base
                      racket/class
                      net/url net/head net/http-client
                      web-server/http/request-structs))
@@ -103,7 +104,9 @@ is for handling cookies on the server side; it includes:
                    [extension  (or/c path/extension-value? #f)])
                   #:omit-constructor]{
   A structure type for cookies the server will send to the user agent. For
-  client-side cookies, see @racketmodname[net/cookies/user-agent].
+  client-side cookies, see @racketmodname[net/cookies/user-agent]. Programs
+  using this library should construct their @racket[cookie] structs via
+  @racket[make-cookie], below.
 }
 
 @defproc[(make-cookie [name cookie-name?]
@@ -118,7 +121,10 @@ is for handling cookies on the server side; it includes:
                       [#:extension extension (or/c path/extension-value? #f)
                                    #f])
          cookie?]{
-Constructs a cookie for sending to a user agent.
+Constructs a cookie for sending to a user agent. If @racket[name] or
+@racket[value] is a byte string, this procedure will convert it to a string
+using @racket[bytes->string/utf-8]; programs requiring a different encoding
+should convert their byte strings before calling @racket[make-cookie].
 
 Both @racket[exp-date] and @racket[max-age] are for specifying a time at which
 the user agent should remove the cookie from its cookie store.
