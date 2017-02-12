@@ -7,5 +7,5 @@
 (define build-deps
   '("rackunit-lib" "web-server-lib" "racket-doc" "scribble-lib" "net-doc" "srfi-doc" "web-server-doc"))
 
-(define version "1.1.1")
+(define version "1.1.2")
 

@@ -37,7 +37,7 @@
   (let ([c (make-cookie #"a" #"b")])
     (test-equal? "test bytes->string coercion of name/value in constructor"
                  (list (cookie-name c) (cookie-value c))
-                 "a" "b"))
+                 (list "a" "b")))
   (ctest "test each modifier individually: expires"
          (make-cookie "a" "b" #:expires exp-date)
          (format "a=b; Expires=~a" exp-date-str))
