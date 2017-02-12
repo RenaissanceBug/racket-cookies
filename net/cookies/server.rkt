@@ -62,7 +62,13 @@
                      #:http-only? [http-only? #f]
                      #:extension  [extension #f])
   (define (convert x)
+<<<<<<< HEAD
     (if (bytes? x) (bytes->string/utf-8) x))
+=======
+    (if (bytes? x)
+        (bytes->string/utf-8 x)
+        x))
+>>>>>>> 2a9b58d... Fixed typo in previous patch
   (cookie (convert name) (convert value) expires max-age domain path secure? http-only? extension))
 
 ;; cookie -> String
