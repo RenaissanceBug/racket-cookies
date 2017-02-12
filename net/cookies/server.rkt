@@ -61,7 +61,11 @@
                      #:secure?    [secure? #f]
                      #:http-only? [http-only? #f]
                      #:extension  [extension #f])
-  (cookie name value expires max-age domain path secure? http-only? extension))
+  (define (convert x)
+    (if (bytes? x)
+        (bytes->string/utf-8)
+        x))
+  (cookie (convert name) (convert value) expires max-age domain path secure? http-only? extension))
 
 ;; cookie -> String
 ;; produce a Set-Cookie header suitable for sending to a client
