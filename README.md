@@ -12,4 +12,4 @@ Install via:
 raco pkg install net-cookies
 ```
 
-Documentation is available on [the Racket build server](http://pkg-build.racket-lang.org/doc/cookies/index.html).
+Documentation is included with Racket and available on [the Racket docs site](http://docs.racket-lang.org/cookies/index.html).
