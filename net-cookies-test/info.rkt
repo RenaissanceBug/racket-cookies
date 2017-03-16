@@ -12,6 +12,6 @@
   '("net-cookies-lib"
     "rackunit-lib"))
 
-(define update-implies '("web-server-lib"))
+(define update-implies '("net-cookies-lib"))
 
 (define version "1.1.3")
