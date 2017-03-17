@@ -1,7 +1,9 @@
 #lang scribble/doc
 
 @(require scribble/manual scribble/eval
-          (for-label "common.rkt" "server.rkt" "user-agent.rkt"
+          (for-label net/cookies/common
+                     net/cookies/server
+                     net/cookies/user-agent
                      racket/base
                      racket/class
                      net/url net/head net/http-client

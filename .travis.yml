@@ -34,7 +34,10 @@ before_script:
 
 script:
  - cd ..
- - raco pkg install --deps search-auto --link racket-cookies/
- - raco test -x -p racket-cookies
+ - raco pkg install --deps search-auto --link racket-cookies/net-cookies-lib
+ - raco pkg install --deps search-auto --link racket-cookies/net-cookies-doc
+ - raco pkg install --deps search-auto --link racket-cookies/net-cookies-test
+ - raco pkg install --deps search-auto --link racket-cookies/net-cookies
+ - raco test -x -p net-cookies
 
 after_script:

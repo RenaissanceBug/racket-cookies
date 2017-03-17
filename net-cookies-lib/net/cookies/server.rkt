@@ -88,6 +88,11 @@
 ;; for keys and values?
 (define (cookie-header->alist header [decode (lambda (x) x)])
   (define header-pairs (regexp-split #"; " header))
+  (define handle-quoted-value
+    (match-lambda
+      [(regexp #rx"^\"(.*)\"$" (list _ inner))
+       inner]
+      [val val]))
   (reverse
    (for/fold ([cookies '()]) ([bs header-pairs]
                               #:unless (or (bytes=? bs #"")
@@ -95,10 +100,10 @@
      (match (regexp-split #"=" bs)
        [(list) cookies]
        [(list (? cookie-name? key) (? cookie-value? val))
-        (cons (cons (decode key) (decode val)) cookies)]
+        (cons (cons (decode key) (decode (handle-quoted-value val))) cookies)]
        [(list-rest (? cookie-name? key) val-parts)
         #:when (andmap cookie-value? val-parts)
-        (cons (cons (decode key) (decode (bytes-join val-parts #"=")))
+        (cons (cons (decode key) (decode (handle-quoted-value (bytes-join val-parts #"="))))
               cookies)]
        [_ cookies]))))
 
