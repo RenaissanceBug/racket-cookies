@@ -1,5 +1,6 @@
 # Racket compiled files
 compiled/
+doc/
 
 # Racket compiled documentation
 *.html
