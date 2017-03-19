@@ -154,7 +154,7 @@
                (cookie-header->alist #"seenIntro=; uname=bob; nick=\"FuzzyDucky\"")
                '((#"seenIntro" . #"")
                  (#"uname" . #"bob")
-                 (#"nick" . #"\"FuzzyDucky\"")))
+                 (#"nick" . #"FuzzyDucky")))
   ;; No valid cookies:
   (test-equal? "no valid cookies" (cookie-header->alist #"; ; ; ") '())
   (test-equal? "no valid cookies" (cookie-header->alist #"=; ;a=b ; =5; x=y z; ")
