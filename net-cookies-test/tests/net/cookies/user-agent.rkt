@@ -18,23 +18,6 @@
 
 ;;;; Processing the Set-Cookie header ;;;;
 
-;; Helpers: Cookie times will vary depending on when the test is run,
-;; so the following two fns allow for that variation.
-
-(define ((ua-cookie-matches expected-uac) uac)
-  (and (ua-cookie? uac)
-       (match (list uac expected-uac)
-         [(list (ua-cookie name value dom path exp _ _ p? h? s? http-only?)
-                (ua-cookie name value dom path exp _ _ p? h? s? http-only?))
-          #t]
-         [_ #f])))
-
-(define ((test-ua-cookies-match expected-ls) ls)
-  (for/and ([expected expected-ls]
-            [cookie ls])
-    (and (ua-cookie? cookie)
-         ((ua-cookie-matches expected) cookie))))
-
 ;; URLs for testing:
 (define example-url (string->url "http://example.com/"))
 (define https://example.com/ (string->url "https://example.com/"))
@@ -64,74 +47,110 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Testing extract-cookies
 
-(define (test-header message headers url cookie [maxage #f])
+;; Given a list of headers, a URL, and a template expected cookie, produces
+;; a test case that runs extract-cookies on the headers and URL, checking the
+;; output as follows:
+;;  1) that it be a singleton list containing one cookie c
+;;  2) that all fields of c other than ctime and atime be equal to those of the
+;;     template cookie
+;;  3) that the ctime and atime of c be approximately equal to the current
+;;     time.
+(define (test-cookie-from-header message headers url template [maxage #f])
   (define now (current-seconds))
-  (test-equal? message
-               (extract-cookies headers url)
-               (list
-                (struct-copy ua-cookie cookie
-                             [expiration-time
-                              (if maxage (+ now maxage) max-cookie-seconds)]
-                             [creation-time now]
-                             [access-time now]))))
+  (test-single-cookie-OK? message
+     (extract-cookies headers url)
+     (struct-copy ua-cookie template
+                  [expiration-time
+                   (if maxage (+ now maxage) max-cookie-seconds)]
+                  [creation-time now]
+                  [access-time now])))
+
+;; Checks that extracted is a singleton list containing a UA cookie
+;; that matches expected and has creation/access times within
+;; (current-time-tolerance) of the expected times.
+(define (test-single-cookie-OK? message extracted expected)
+  (test-case message
+    (check-match extracted (list (? ua-cookie?)))
+    (check-cookie-with-approx-ctime/atime? (car extracted) expected)))
+
+(define current-time-tolerance (make-parameter 2))
+;; Check the actual cookie against the expected one, with all parts equal
+;; except for the ctime and atime fields, which must be within the
+;; current-time-tolerance (in seconds) of expected.
+(define-binary-check (check-cookie-with-approx-ctime/atime? actual expected)
+  (check-pred ua-cookie? actual)
+  (check-pred ua-cookie? expected)
+  (match expected
+    [(ua-cookie name1 val1 dom1 path1 exp1 ctime1 atime1 p?1 h?1 s?1 http-only?1)
+     (check-match actual
+       (ua-cookie name2 val2 dom2 path2 exp2 ctime2 atime2 p?2 h?2 s?2 http-only?2)
+       (let ([tol (current-time-tolerance)])
+         (and (andmap equal?
+                      (list name1 val1 dom1 path1 exp1 p?1 h?1 s?1 http-only?1)
+                      (list name2 val2 dom2 path2 exp2 p?2 h?2 s?2 http-only?2))
+              (<= (- ctime1 tol) ctime2 (+ ctime1 tol))
+              (<= (- atime1 tol) atime2 (+ atime1 tol)))))]
+    [_ ; can't happen
+     (fail "problem with library test; please file an issue on github")]))
 
 (define-test-suite extract-cookies-tests
-  (test-header "extract cookie with no exp-time or options"
-               '((#"Set-Cookie"
-                  . #"foo=bar"))
-               example-url
-               (ua-cookie "foo" "bar" "example.com" "/" 1 1 1
-                          #f #t #f #f))
-  (test-header "extract cookie with max-age only"
-               '((#"Set-Cookie"
-                  . #"foo=bar; Max-Age=51"))
-               example-url
-               (ua-cookie "foo" "bar" "example.com" "/" 1 1 1
-                          #t #t #f #f)
-               51)
-  (test-header "extract cookie with max-age and domain"
-               '((#"Set-Cookie"
-                  . #"foo=bar; Max-Age=52; Domain=example.com"))
-               example-url
-               (ua-cookie "foo" "bar" "example.com" "/" 1 1 1
-                          #t #f #f #f)
-               52)
-  (test-header "extract cookie with max-age, secure, domain"
-               '((#"Set-Cookie"
-                  . #"foo=bar; Max-Age=53; Secure; Domain=example.com"))
-               example-url
-               (ua-cookie "foo" "bar" "example.com" "/" 1 1 1
-                          #t #f #t #f)
-               53)
-  (test-header "extract cookie with httponly, domain"
-               '((#"Set-Cookie"
-                  . #"foo=bar; httpOnly; Domain=example.com"))
-               example-url
-               (ua-cookie "foo" "bar" "example.com" "/" 1 1 1
-                          #f #f #f #t))
-  (test-header "extract cookie with path"
-               '((#"Set-Cookie"
-                  . #"foo=bar; Path=/abc/def"))
-               example-url
-               (ua-cookie "foo" "bar" "example.com" "/abc/def" 1 1 1
-                          #f #t #f #f))
-  (test-header "extract cookie with domain, path"
-               '((#"Set-Cookie"
-                  . #"foo=bar; Domain=test.example.com; Path=/abc/de/f"))
-               test-example-url
-               (ua-cookie "foo" "bar" "test.example.com" "/abc/de/f" 1 1 1
+  (test-cookie-from-header
+    "extract cookie with no exp-time or options"
+    '((#"Set-Cookie" . #"foo=bar"))
+    example-url
+    (ua-cookie "foo" "bar" "example.com" "/" 1 1 1
+               #f #t #f #f))
+  (test-cookie-from-header
+    "extract cookie with max-age only"
+    '((#"Set-Cookie" . #"foo=bar; Max-Age=51"))
+    example-url
+    (ua-cookie "foo" "bar" "example.com" "/" 1 1 1
+               #t #t #f #f)
+    51)
+  (test-cookie-from-header
+    "extract cookie with max-age and domain"
+    '((#"Set-Cookie" . #"foo=bar; Max-Age=52; Domain=example.com"))
+    example-url
+    (ua-cookie "foo" "bar" "example.com" "/" 1 1 1
+               #t #f #f #f)
+    52)
+  (test-cookie-from-header
+    "extract cookie with max-age, secure, domain"
+    '((#"Set-Cookie" . #"foo=bar; Max-Age=53; Secure; Domain=example.com"))
+    example-url
+    (ua-cookie "foo" "bar" "example.com" "/" 1 1 1
+               #t #f #t #f)
+    53)
+  (test-cookie-from-header
+    "extract cookie with httponly, domain"
+    '((#"Set-Cookie" . #"foo=bar; httpOnly; Domain=example.com"))
+    example-url
+    (ua-cookie "foo" "bar" "example.com" "/" 1 1 1
+               #f #f #f #t))
+  (test-cookie-from-header
+    "extract cookie with path"
+    '((#"Set-Cookie" . #"foo=bar; Path=/abc/def"))
+    example-url
+    (ua-cookie "foo" "bar" "example.com" "/abc/def" 1 1 1
+               #f #t #f #f))
+  (test-cookie-from-header
+    "extract cookie with domain, path"
+    '((#"Set-Cookie" . #"foo=bar; Domain=test.example.com; Path=/abc/de/f"))
+    test-example-url
+    (ua-cookie "foo" "bar" "test.example.com" "/abc/de/f" 1 1 1
                           #f #f #f #f))
-  (test-header "extract cookie -- use last domain given (1)"
-               '((#"Set-Cookie"
-                  . #"foo=bar; Domain=test.example.com; Domain=example.com"))
-               test-example-url
-               (ua-cookie "foo" "bar" "example.com" "/" 1 1 1 #f #f #f #f))
-  (test-header "extract cookie -- use last domain given (2)"
-               '((#"Set-Cookie"
-                  . #"foo=bar; Domain=example.com; Domain=test.example.com;"))
-               test-example-url
-               (ua-cookie "foo" "bar" "test.example.com" "/" 1 1 1 #f #f #f #f))
-  
+  (test-cookie-from-header
+    "extract cookie -- use last domain given (1)"
+    '((#"Set-Cookie" . #"foo=bar; Domain=test.example.com; Domain=example.com"))
+    test-example-url
+    (ua-cookie "foo" "bar" "example.com" "/" 1 1 1 #f #f #f #f))
+  (test-cookie-from-header
+    "extract cookie -- use last domain given (2)"
+    '((#"Set-Cookie"
+       . #"foo=bar; Domain=example.com; Domain=test.example.com;"))
+    test-example-url
+    (ua-cookie "foo" "bar" "test.example.com" "/" 1 1 1 #f #f #f #f))
+
   (test-equal? "cookies that should be ignored"
                (extract-cookies
                 '((#"Set-Cookie" . #"foo=bar; Domain=foo.com") ; wrong dom
@@ -142,47 +161,56 @@
                '()))
 
 (define-test-suite extract-cookies-bytes-tests
-  (test-header "bytes: extract cookie with no exp-time or options"
-               '(#"Set-Cookie: foo=bar")
-               example-url
-               (ua-cookie "foo" "bar" "example.com" "/" 1 1 1 #f #t #f #f))
-  (test-header "extract cookie with max-age only"
-               '(#"Set-Cookie: foo=bar; Max-Age=51")
-               example-url
-               (ua-cookie "foo" "bar" "example.com" "/" 1 1 1 #t #t #f #f)
-               51)
-  (test-header "extract cookie with max-age and domain"
-               '(#"Set-Cookie: foo=bar; Max-Age=52; Domain=example.com")
-               example-url
-               (ua-cookie "foo" "bar" "example.com" "/" 1 1 1 #t #f #f #f)
-               52)
-  (test-header "extract cookie with max-age, secure, domain"
-               '(#"Set-Cookie: foo=bar; Max-Age=53; Secure; Domain=example.com")
-               example-url
-               (ua-cookie "foo" "bar" "example.com" "/" 1 1 1 #t #f #t #f)
-               53)
-  (test-header "extract cookie with httponly, domain"
-               '(#"Set-Cookie: foo=bar; httpOnly; Domain=example.com")
-               example-url
-               (ua-cookie "foo" "bar" "example.com" "/" 1 1 1 #f #f #f #t))
-  (test-header "extract cookie with path"
-               '(#"Set-Cookie: foo=bar; Path=/abc/def")
-               example-url
-               (ua-cookie "foo" "bar" "example.com" "/abc/def" 1 1 1 #f #t #f #f))
-  (test-header "extract cookie with domain, path"
-               '(#"Set-Cookie: foo=bar; Domain=test.example.com; Path=/abc/de/f")
-               test-example-url
-               (ua-cookie "foo" "bar" "test.example.com" "/abc/de/f" 1 1 1
-                          #f #f #f #f))
-  (test-header "extract cookie -- use last domain given (1)"
-               '(#"Set-Cookie: foo=bar; Domain=test.example.com; Domain=example.com")
-               test-example-url
-               (ua-cookie "foo" "bar" "example.com" "/" 1 1 1 #f #f #f #f))
-  (test-header "extract cookie -- use last domain given (2)"
-               '(#"Set-Cookie: foo=bar; Domain=example.com; Domain=test.example.com;")
-               test-example-url
-               (ua-cookie "foo" "bar" "test.example.com" "/" 1 1 1 #f #f #f #f))
-  
+  (test-cookie-from-header
+    "bytes: extract cookie with no exp-time or options"
+    '(#"Set-Cookie: foo=bar")
+    example-url
+    (ua-cookie "foo" "bar" "example.com" "/" 1 1 1 #f #t #f #f))
+  (test-cookie-from-header
+    "extract cookie with max-age only"
+    '(#"Set-Cookie: foo=bar; Max-Age=51")
+    example-url
+    (ua-cookie "foo" "bar" "example.com" "/" 1 1 1 #t #t #f #f)
+    51)
+  (test-cookie-from-header
+    "extract cookie with max-age and domain"
+    '(#"Set-Cookie: foo=bar; Max-Age=52; Domain=example.com")
+    example-url
+    (ua-cookie "foo" "bar" "example.com" "/" 1 1 1 #t #f #f #f)
+    52)
+  (test-cookie-from-header
+    "extract cookie with max-age, secure, domain"
+    '(#"Set-Cookie: foo=bar; Max-Age=53; Secure; Domain=example.com")
+    example-url
+    (ua-cookie "foo" "bar" "example.com" "/" 1 1 1 #t #f #t #f)
+    53)
+  (test-cookie-from-header
+    "extract cookie with httponly, domain"
+    '(#"Set-Cookie: foo=bar; httpOnly; Domain=example.com")
+    example-url
+    (ua-cookie "foo" "bar" "example.com" "/" 1 1 1 #f #f #f #t))
+  (test-cookie-from-header
+    "extract cookie with path"
+    '(#"Set-Cookie: foo=bar; Path=/abc/def")
+    example-url
+    (ua-cookie "foo" "bar" "example.com" "/abc/def" 1 1 1 #f #t #f #f))
+  (test-cookie-from-header
+    "extract cookie with domain, path"
+    '(#"Set-Cookie: foo=bar; Domain=test.example.com; Path=/abc/de/f")
+    test-example-url
+    (ua-cookie "foo" "bar" "test.example.com" "/abc/de/f" 1 1 1
+               #f #f #f #f))
+  (test-cookie-from-header
+    "extract cookie -- use last domain given (1)"
+    '(#"Set-Cookie: foo=bar; Domain=test.example.com; Domain=example.com")
+    test-example-url
+    (ua-cookie "foo" "bar" "example.com" "/" 1 1 1 #f #f #f #f))
+  (test-cookie-from-header
+    "extract cookie -- use last domain given (2)"
+    '(#"Set-Cookie: foo=bar; Domain=example.com; Domain=test.example.com;")
+    test-example-url
+    (ua-cookie "foo" "bar" "test.example.com" "/" 1 1 1 #f #f #f #f))
+
   (test-equal? "cookies that should be ignored"
                (extract-cookies
                 '(#"Set-Cookie: foo=bar; Domain=foo.com"          ; wrong dom
@@ -474,6 +502,26 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Parsing cookies and extracting them from headers
 
+;; Helpers: Cookie times will vary depending on when the test is run;
+;; the following two fns ignore differences in ctime and atime.
+
+(define ((ua-cookie-matches expected-uac) uac)
+  (and (ua-cookie? uac)
+       (match (list uac expected-uac)
+         [(list (ua-cookie name value dom path exp _ _ p? h? s? http-only?)
+                (ua-cookie name value dom path exp _ _ p? h? s? http-only?))
+          #t]
+         [_ #f])))
+
+(define ((test-ua-cookies-match expected-ls) ls)
+  (for/and ([expected expected-ls]
+            [cookie ls])
+    (and (ua-cookie? cookie)
+         ((ua-cookie-matches expected) cookie))))
+
+;; TODO (low priority) we could check that atime/ctime are roughly current
+;; (see "Testing extract-cookies" above) -- but if the tests above are
+;; finding correct times, the time-setting code is already being exercised
 (define-test-suite cookie-parsing-tests
   (test-pred "extracting from HTTP Response headers"
              (test-ua-cookies-match
