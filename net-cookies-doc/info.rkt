@@ -21,3 +21,6 @@
     ))
 
 (define version "1.1.3")
+
+(define license
+  '(Apache-2.0 OR MIT))
