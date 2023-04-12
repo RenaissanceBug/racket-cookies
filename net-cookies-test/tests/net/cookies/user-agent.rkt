@@ -346,6 +346,40 @@
                  #"c=d; user=bob; a=b")
     ))
 
+;; Testing repeated insertion of cookies. Test from Alexis King; see
+;; https://github.com/RenaissanceBug/racket-cookies/issues/14.
+;; TODO resume here — test-ua-cookies-match isn't catching the duplicates
+(define-test-suite repeat-two-cookies-test
+  (parameterize ([current-cookie-jar (new list-cookie-jar%)])
+    (define now (current-seconds))
+    (define headers '(#"set-cookie: cookie1=value1; Max-Age=100000; path=/; httponly"
+                      #"set-cookie: cookie2=value2; Max-Age=100000; path=/; httponly"))
+    ;; The cookies should look like this but with different times:
+    (define cookie1 (ua-cookie "cookie1" "value1" "example.com" "/" 1681348246 1681248243 1681248246 #t #t #f #t))
+    (define cookie2 (ua-cookie "cookie2" "value2" "example.com" "/" 1681348246 1681248243 1681248246 #t #t #f #t))
+    (define url (string->url "https://example.com/"))
+    
+    (extract-and-save-cookies! headers url)
+    (test-pred "two cookies"
+               (test-ua-cookies-match (list cookie2 cookie1))
+               (send (current-cookie-jar) cookies-matching url))
+    (sleep 1)
+    (extract-and-save-cookies! headers url)
+    (test-pred "two cookies after 2nd insert"
+               (test-ua-cookies-match (list cookie2 cookie1))
+               (send (current-cookie-jar) cookies-matching url))
+    (sleep 1)
+    (extract-and-save-cookies! headers url)
+    (test-pred "two cookies after 3rd insert"
+               (test-ua-cookies-match (list cookie2 cookie1))
+               (send (current-cookie-jar) cookies-matching url))
+    (sleep 1)
+    (extract-and-save-cookies! headers url)
+    (test-pred "two cookies after 4th insert"
+               (test-ua-cookies-match (list cookie2 cookie1))
+               (send (current-cookie-jar) cookies-matching url))
+    ))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Cookies used in subsequent tests:
 
@@ -504,7 +538,6 @@
 
 ;; Helpers: Cookie times will vary depending on when the test is run;
 ;; the following two fns ignore differences in ctime and atime.
-
 (define ((ua-cookie-matches expected-uac) uac)
   (and (ua-cookie? uac)
        (match (list uac expected-uac)
@@ -514,10 +547,11 @@
          [_ #f])))
 
 (define ((test-ua-cookies-match expected-ls) ls)
-  (for/and ([expected expected-ls]
-            [cookie ls])
-    (and (ua-cookie? cookie)
-         ((ua-cookie-matches expected) cookie))))
+  (and (= (length expected-ls) (length ls))
+       (for/and ([expected expected-ls]
+                 [cookie ls])
+         (and (ua-cookie? cookie)
+              ((ua-cookie-matches expected) cookie)))))
 
 ;; TODO (low priority) we could check that atime/ctime are roughly current
 ;; (see "Testing extract-cookies" above) -- but if the tests above are
