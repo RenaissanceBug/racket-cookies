@@ -9,7 +9,7 @@
 
 (define deps '("srfi-lite-lib" "base"))
 
-(define version "1.1.3")
+(define version "1.1.4")
 
 
 (define license
