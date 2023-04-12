@@ -140,33 +140,71 @@
     (define (insert new-cookie jar via-http?)
       (match-define (ua-cookie name _ dom path _ ctime _ _ _ _ http-only?)
         new-cookie)
-      (if (and http-only? (not via-http?))   ; ignore -- see Sec 5.3.10
-          jar
-          (let insert-into ([jar jar]) ; != Binks
-            (cond
-              [(null? jar) (if (cookie-ok? new-cookie) (list new-cookie) '())]
-              [else
-               (match-define (ua-cookie name2 _ dom2 path2 _ ctime2 _ _ _ _ ho2?)
-                 (car jar))
+      (cond
+        [(and http-only? (not via-http?))   ; ignore new cookie per §5.3.10
+         jar]
+        [(cookie-matching name dom path jar)
+         => (match-lambda
+              [(ua-cookie _ _ _ _ _ _ _ _ _ _ ho2?)
                (cond
-                 [(and (string=? name name2) (string=? dom dom2)
-                       (string=? path path2)) ; Replace this cookie.
-                  (filter cookie-ok?
-                          (if (and ho2? (not via-http?))
-                              jar  ; ignore new cookie -- see Sec 5.3.11.2.
-                              (cons (struct-copy ua-cookie new-cookie
-                                                 [creation-time ctime2])
-                                    (cdr jar))))]
-                 [(let ([plen  (string-length path)]
-                        [plen2 (string-length path2)])
-                    (or (< plen plen2) (and (= plen plen2) (> ctime ctime2))))
-                  ;; Shorter path, or eq path and later ctime, comes first.
-                  (filter cookie-ok? (cons new-cookie jar))]
-                 [(cookie-ok? (car jar))
-                  (cons (car jar) (insert-into (cdr jar)))]
-                 [else (insert-into (cdr jar))])]))))
+                 [(and ho2? (not via-http?))
+                   jar] ; ignore new cookie per §5.3.11.2.
+                 [(cookie-ok? new-cookie)
+                  (insert-unique-cookie new-cookie
+                                         (remove-cookie-matching name dom path jar))]
+                 [else ; expire existing cookie
+                  (remove-cookie-matching name dom path jar)])])]
+        [(not (cookie-ok? new-cookie)) jar] ; ignore new cookie - expired
+        [else ;; insert the new cookie into its appropriate place in the list
+         (insert-unique-cookie new-cookie jar)]))
 
     (define (cookie-ok? c) (not (cookie-expired? c)))
+
+    ;; ua-cookie (listof ua-cookie) -> (listof ua-cookie)
+    ;; insert new-cookie into jar. assumes that no cookie in jar has the same
+    ;; combo of name/domain/path as new-cookie.
+    (define (insert-unique-cookie new-cookie jar)
+      (match-define (ua-cookie name _ dom path _ ctime _ _ _ _ http-only?)
+        new-cookie)
+      (let insert-into ([jar jar]) ; != Binks
+        (cond
+          [(null? jar)
+           (list new-cookie)]
+          [else
+           (match-define (ua-cookie name2 _ _ path2 _ ctime2 _ _ _ _ _) (car jar))
+           (cond
+             [(let ([plen  (string-length path)]
+                    [plen2 (string-length path2)])
+                (and (or (< plen plen2)
+                         (and (= plen plen2) (> ctime ctime2)))))
+              ;; Shorter path, or eq path and later ctime, comes first.
+              (cons new-cookie (filter cookie-ok? jar))]
+             [(cookie-ok? (car jar))
+              (cons (car jar) (insert-into (cdr jar)))]
+             [else (insert-into (cdr jar))])])))
+    
+    ;; String^3 (listof ua-cookie) -> (maybe ua-cookie)
+    ;; produces all cookies in jar that do not have the given combo of name/dom/path
+    (define (remove-cookie-matching name dom path jar)
+      (filter (match-lambda
+                [(ua-cookie name2 _ dom2 path2 _ _ _ _ _ _ _)
+                 (not (and (string=? name name2)
+                           (string=? dom dom2)
+                           (string=? path path2)))])
+              jar))
+
+    ;; String^3 (listof ua-cookie) -> (maybe ua-cookie)
+    ;; if the jar contains a cookie with given name/dom/path, return it.
+    ;; produce #f otherwise.
+    (define (cookie-matching name dom path jar)
+      (for/first ([c (in-list jar)]
+                  #:when (match c
+                           [(ua-cookie name2 _ dom2 path2 _ _ _ _ _ _ _)
+                            (and (string=? name name2)
+                                 (string=? dom dom2)
+                                 (string=? path path2))]
+                           [_ #f]))
+        c))
 
     (define/public (cookies-matching url
                                      [secure? (equal? (url-scheme url) "https")])
