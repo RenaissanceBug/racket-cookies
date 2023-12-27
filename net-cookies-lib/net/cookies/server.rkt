@@ -5,7 +5,6 @@
          racket/match
          racket/serialize ; for serializable cookie structs
          racket/string
-         srfi/19 ; for date handling
          "common.rkt")
 
 (provide
@@ -112,10 +111,7 @@
      (string-join
       (filter values
               (list (format "~a=~a" name value)
-                    (and expires
-                         (format "Expires=~a"
-                                 (date->string expires
-                                               rfc1123:date-template)))
+                    (and expires (format "Expires=~a" (date->rfc1123-string expires)))
                     (maybe-format "Max-Age=~a" max-age)
                     (maybe-format "Domain=~a" domain)
                     (maybe-format "Path=~a" path)
@@ -159,6 +155,58 @@ asctime format. HTTP-date is case sensitive and MUST NOT include
 additional LWS beyond that specifically included as SP in the
 grammar.
 |#
-(define rfc1123:date-template "~a, ~d ~b ~Y ~H:~M:~S GMT")
-(define rfc850:date-template "~A, ~d-~b-~y ~H:~M:~S GMT")
-(define asctime:date-template "~a ~b ~e ~H:~M:~S ~Y")
+#;(define rfc1123:date-template "~a, ~d ~b ~Y ~H:~M:~S GMT")
+#;(define rfc850:date-template "~A, ~d-~b-~y ~H:~M:~S GMT")
+#;(define asctime:date-template "~a ~b ~e ~H:~M:~S ~Y")
+
+(define (date->rfc1123-string the-date)
+  (define (display-padded-number n out)
+    (if (< n 10)
+        (fprintf out "0~a" n)
+        (display n out)))
+  (match-define (date second minute hour day month year week-day _year-day _dst? _tz-offset)
+    the-date)
+  (let ([out (open-output-string)])
+    (write-string
+     (case week-day
+       [(0) "Sun"]
+       [(1) "Mon"]
+       [(2) "Tue"]
+       [(3) "Wed"]
+       [(4) "Thu"]
+       [(5) "Fri"]
+       [(6) "Sat"]
+       [else (error 'date->rfc1123-string "invalid week-day: ~s" week-day)])
+     out)
+    (display ", " out)
+    (display-padded-number day out)
+    (display " " out)
+    (write-string
+     (case month
+       [(1) "Jan"]
+       [(2) "Feb"]
+       [(3) "Mar"]
+       [(4) "Apr"]
+       [(5) "May"]
+       [(6) "Jun"]
+       [(7) "Jul"]
+       [(8) "Aug"]
+       [(9) "Sep"]
+       [(10) "Oct"]
+       [(11) "Nov"]
+       [(12) "Dec"]
+       [else (error 'date->rfc1123-string "invalid month: ~s" month)])
+     out)
+    (display " " out)
+    (display year out)
+    (display " " out)
+    (display-padded-number hour out)
+    (display ":" out)
+    (display-padded-number minute out)
+    (display ":" out)
+    (display-padded-number second out)
+    (display " GMT" out)
+    (get-output-string out)))
+
+(module+ private
+  (provide date->rfc1123-string))
