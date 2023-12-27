@@ -1,6 +1,6 @@
 #lang racket/base
 
-(require racket/contract
+(require racket/contract/base
          racket/class ; for cookie-jar interface & class
          racket/list
          racket/match
@@ -51,7 +51,7 @@
           [cookie-expired? (->* (ua-cookie?) ((and/c integer? positive?))
                                 boolean?)]
           [current-cookie-jar (parameter/c (is-a?/c cookie-jar<%>))]
-          [list-cookie-jar% 
+          [list-cookie-jar%
            (class/c [save-cookies! (->*m ((listof ua-cookie?)) (boolean?) void?)]
                     [save-cookie!  (->*m (ua-cookie?)          (boolean?) void?)]
                     [cookies-matching
@@ -182,7 +182,7 @@
              [(cookie-ok? (car jar))
               (cons (car jar) (insert-into (cdr jar)))]
              [else (insert-into (cdr jar))])])))
-    
+
     ;; String^3 (listof ua-cookie) -> (maybe ua-cookie)
     ;; produces all cookies in jar that do not have the given combo of name/dom/path
     (define (remove-cookie-matching name dom path jar)
@@ -248,10 +248,10 @@
   (let/ec esc
     (define (ignore-this-Set-Cookie) (esc #f))
     (define now (current-seconds))
-    
+
     (match-define (list-rest nvpair unparsed-attributes)
       (string-split (decode set-cookie-bytes) ";"))
-    
+
     (define-values (name value)
       (match (regexp-match nvpair-regexp nvpair)
         [(list all "" v) (ignore-this-Set-Cookie)]
@@ -260,7 +260,7 @@
 
     ;;; parsing the unparsed-attributes
     (define-values (domain-attribute path expires max-age secure? http-only?)
-      (parse-cookie-attributes unparsed-attributes url))   
+      (parse-cookie-attributes unparsed-attributes url))
 
     (define-values (host-only? domain)
       (let ([request-host (url-host url)])
@@ -486,11 +486,9 @@
       [(url? url)    (url-full-path url)]))
   (define cookie-len (string-length cookie-path))
   (define request-path-len (string-length request-path))
-  
+
   (and (<= cookie-len request-path-len)
        (string=? (substring request-path 0 cookie-len) cookie-path)
        (or (char=? (string-ref cookie-path (sub1 cookie-len)) #\/)
            (and (< cookie-len request-path-len)
                 (char=? (string-ref request-path cookie-len) #\/)))))
-
-

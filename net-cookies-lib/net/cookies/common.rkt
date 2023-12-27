@@ -1,17 +1,23 @@
-#lang racket
+#lang racket/base
 
-(provide (contract-out
-          [cookie-name? (-> any/c boolean?)]
-          [cookie-value? (-> any/c boolean?)]
-          [path/extension-value? (-> any/c boolean?)]
-          [domain-value? (-> any/c boolean?)]
-          ))
+(require racket/contract/base
+         racket/match
+         racket/string)
 
-(require racket/match)
+(provide
+ (contract-out
+  [cookie-name? (-> any/c boolean?)]
+  [cookie-value? (-> any/c boolean?)]
+  [path/extension-value? (-> any/c boolean?)]
+  [domain-value? (-> any/c boolean?)]))
 
 ;;;;;;;;; Cookie names ;;;;;;;;;
 
-(require srfi/13 srfi/14) ; for charsets, and testing strings against them
+(require srfi/14) ; for charsets, and testing strings against them
+
+(define (string-every cs s)
+  (for/and ([c (in-string s)])
+    (char-set-contains? cs c)))
 
 ;; cookie-name? : Any -> Bool
 ;; true iff s is a token, per RFC6265; see below
@@ -30,10 +36,12 @@
 ;;                | "{" | "}" | SP | HT
 ;; see also RFC2616 Sec 2.2
 
+(define separators
+  (bytes->list #"()<>@,;:\\\"/[]?={} \t"))
 (define (token-byte? b)
   (and (< 31 b 127) (not (separator-byte? b)))) ; exclude CTLs and seps
 (define (separator-byte? b)
-  (member b (bytes->list #"()<>@,;:\\\"/[]?={} \t")))
+  (memv b separators))
 
 (define char-set:separators
   (char-set-union (string->char-set "()<>@,;:\\\"/[]?={}")
