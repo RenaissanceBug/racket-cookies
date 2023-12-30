@@ -17,5 +17,5 @@ jobs:
         distribution: 'full'
         version: ${{ matrix.racket-version }}
     - run: sudo raco pkg update net-cookies{-lib,-doc,}/
-    - run: raco pkg install net-cookies-test/
+    - run: raco pkg install --auto net-cookies-test/
     - run: raco test -x -p net-cookies
