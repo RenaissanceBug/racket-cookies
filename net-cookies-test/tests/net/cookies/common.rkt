@@ -10,7 +10,8 @@
   (run-tests cookie-name-prop-tests)
   (run-tests cookie-value-tests)
   (run-tests cookie-value-prop-tests)
-  (run-tests p/e-value-tests))
+  (run-tests p/e-value-tests)
+  (run-tests p/e-value-prop-tests))
 
 (define-syntax test-cookie-pred
   (syntax-rules (valid invalid)
@@ -37,16 +38,20 @@
              ",,,,,chameleon" "this;that" "this:that" "[bracketed]" "{braced}"
              "slashed/" "back\\slashed" "what?" "x=y" "spaced out" "\ttabbed")))
 
-(define gen:token
+(define (gen:ascii-char exceptions)
   (apply
    gen:choice
    (for*/list ([code (in-range 32 127)] ;; excluding CTLs
                [char (in-value (integer->char code))]
-               #:unless (memv char '(#\( #\) #\< #\> #\@
-                                     #\, #\; #\: #\\ #\"
-                                     #\/ #\[ #\] #\? #\=
-                                     #\{ #\} #\space #\tab)))
+               #:unless (memv char exceptions))
      (gen:const char))))
+
+(define gen:token
+  (gen:ascii-char
+   '(#\( #\) #\< #\> #\@
+     #\, #\; #\: #\\ #\"
+     #\/ #\[ #\] #\? #\=
+     #\{ #\} #\space #\tab)))
 
 (define gen:cookie-name
   (gen:let ([t0 gen:token]
@@ -54,9 +59,10 @@
     (apply string t0 ts)))
 
 (define-test-suite cookie-name-prop-tests
-  (check-property
-   (property ([name gen:cookie-name])
-     (check-true (cookie-name? name)))))
+  (test-case "cookie-name? property tests"
+    (check-property
+     (property ([name gen:cookie-name])
+       (check-true (cookie-name? name))))))
 
 (define-test-suite cookie-value-tests
   (test-cookie-pred "cookie values" cookie-value? #t
@@ -85,9 +91,10 @@
      (string-append "\"" value "\""))))
 
 (define-test-suite cookie-value-prop-tests
-  (check-property
-   (property ([value gen:cookie-value])
-     (check-true (cookie-value? value)))))
+  (test-case "cookie-value? property tests"
+    (check-property
+     (property ([value gen:cookie-value])
+       (check-true (cookie-value? value))))))
 
 (define-test-suite p/e-value-tests
   (test-cookie-pred "path/extension values" path/extension-value? #f
@@ -95,5 +102,16 @@
            "def=(define (forever x) (forever x))"
            "You're so \"cool\"")
     (invalid "x;y" "\000" (string #\rubout))))
+
+(define gen:av-octet
+  (gen:ascii-char '(#\# #\\ #\;)))
+(define gen:p/e-value
+  (gen:string gen:av-octet))
+
+(define-test-suite p/e-value-prop-tests
+  (test-case "path/extension-value? property tests"
+    (check-property
+     (property ([p/e gen:p/e-value])
+       (check-true (path/extension-value? p/e))))))
 
 (module+ test (require (submod ".." main))) ; for raco test & drdr
