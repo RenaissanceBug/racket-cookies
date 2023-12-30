@@ -1,52 +1,49 @@
 #lang racket/base
 
-(require racket/contract
-         (only-in racket/bytes bytes-join)
+(require racket/bytes
+         racket/contract/base
+         racket/match
+         racket/serialize ; for serializable cookie structs
+         racket/string
          "common.rkt")
 
-(provide (contract-out (struct cookie
-                         ([name       (and/c string? cookie-name?)]
-                          [value      (and/c string? cookie-value?)]
-                          [expires    (or/c date? #f)]
-                          [max-age    (or/c (and/c integer? positive?) #f)]
-                          [domain     (or/c domain-value? #f)]
-                          [path       (or/c path/extension-value? #f)]
-                          [secure?    boolean?]
-                          [http-only? boolean?]
-                          [extension  (or/c path/extension-value? #f)])
-                         #:omit-constructor)
-                       [make-cookie
-                        (->* (cookie-name? cookie-value?)
-                             (#:expires    (or/c date? #f)
-                              #:max-age    (or/c (and/c integer? positive?) #f)
-                              #:domain     (or/c domain-value? #f)
-                              #:path       (or/c path/extension-value? #f)
-                              #:secure?    boolean?
-                              #:http-only? boolean?
-                              #:extension  (or/c path/extension-value? #f))
-                             cookie?)]
-                       
-                       [cookie->set-cookie-header (-> cookie? bytes?)]
-                       [clear-cookie-header
-                        (->* (cookie-name?)
-                             (#:domain     (or/c domain-value? #f)
-                              #:path       (or/c path/extension-value? #f))
-                             bytes?)]
-                       [cookie->string (-> cookie? string?)]
-                       
-                       #:forall X
-                       [cookie-header->alist
-                        (case-> (-> bytes? (listof (cons/c bytes? bytes?)))
-                                (-> bytes? (-> bytes? X)
-                                    (listof (cons/c X X))))]
-                       ))
+(provide
+ (contract-out
+  (struct cookie
+    ([name       (and/c string? cookie-name?)]
+     [value      (and/c string? cookie-value?)]
+     [expires    (or/c date? #f)]
+     [max-age    (or/c (and/c integer? positive?) #f)]
+     [domain     (or/c domain-value? #f)]
+     [path       (or/c path/extension-value? #f)]
+     [secure?    boolean?]
+     [http-only? boolean?]
+     [extension  (or/c path/extension-value? #f)])
+    #:omit-constructor)
+  [make-cookie
+   (->* (cookie-name? cookie-value?)
+        (#:expires    (or/c date? #f)
+         #:max-age    (or/c (and/c integer? positive?) #f)
+         #:domain     (or/c domain-value? #f)
+         #:path       (or/c path/extension-value? #f)
+         #:secure?    boolean?
+         #:http-only? boolean?
+         #:extension  (or/c path/extension-value? #f))
+        cookie?)]
 
-(require racket/serialize ; for serializable cookie structs
-         srfi/19          ; for date handling
-         (only-in racket/string
-                  string-join string-split)
-         racket/match
-         )
+  [cookie->set-cookie-header (-> cookie? bytes?)]
+  [clear-cookie-header
+   (->* (cookie-name?)
+        (#:domain     (or/c domain-value? #f)
+         #:path       (or/c path/extension-value? #f))
+        bytes?)]
+  [cookie->string (-> cookie? string?)]
+
+  #:forall X
+  [cookie-header->alist
+   (case-> (-> bytes? (listof (cons/c bytes? bytes?)))
+           (-> bytes? (-> bytes? X)
+               (listof (cons/c X X))))]))
 
 
 (serializable-struct cookie
@@ -114,10 +111,7 @@
      (string-join
       (filter values
               (list (format "~a=~a" name value)
-                    (and expires
-                         (format "Expires=~a"
-                                 (date->string expires
-                                               rfc1123:date-template)))
+                    (and expires (format "Expires=~a" (date->rfc1123-string expires)))
                     (maybe-format "Max-Age=~a" max-age)
                     (maybe-format "Domain=~a" domain)
                     (maybe-format "Path=~a" path)
@@ -131,37 +125,88 @@
 #|
 From RFC6265:
 
-   HTTP applications have historically allowed three different formats
-   for the representation of date/time stamps:
+HTTP applications have historically allowed three different formats
+for the representation of date/time stamps:
 
-      Sun, 06 Nov 1994 08:49:37 GMT  ; RFC 822, updated by RFC 1123
-      Sunday, 06-Nov-94 08:49:37 GMT ; RFC 850, obsoleted by RFC 1036
-      Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
+Sun, 06 Nov 1994 08:49:37 GMT  ; RFC 822, updated by RFC 1123
+Sunday, 06-Nov-94 08:49:37 GMT ; RFC 850, obsoleted by RFC 1036
+Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 
-   The first format is preferred as an Internet standard and represents
-   a fixed-length subset of that defined by RFC 1123 [8] (an update to
-   RFC 822 [9]). The second format is in common use, but is based on the
-   obsolete RFC 850 [12] date format and lacks a four-digit year.
-   HTTP/1.1 clients and servers that parse the date value MUST accept
-   all three formats (for compatibility with HTTP/1.0), though they MUST
-   only generate the RFC 1123 format for representing HTTP-date values
-   in header fields...
+The first format is preferred as an Internet standard and represents
+a fixed-length subset of that defined by RFC 1123 [8] (an update to
+RFC 822 [9]). The second format is in common use, but is based on the
+obsolete RFC 850 [12] date format and lacks a four-digit year.
+HTTP/1.1 clients and servers that parse the date value MUST accept
+all three formats (for compatibility with HTTP/1.0), though they MUST
+only generate the RFC 1123 format for representing HTTP-date values
+in header fields...
 
-      Note: Recipients of date values are encouraged to be robust in
-      accepting date values that may have been sent by non-HTTP
-      applications, as is sometimes the case when retrieving or posting
-      messages via proxies/gateways to SMTP or NNTP.
+Note: Recipients of date values are encouraged to be robust in
+accepting date values that may have been sent by non-HTTP
+applications, as is sometimes the case when retrieving or posting
+messages via proxies/gateways to SMTP or NNTP.
 
-   All HTTP date/time stamps MUST be represented in Greenwich Mean Time
-   (GMT), without exception. For the purposes of HTTP, GMT is exactly
-   equal to UTC (Coordinated Universal Time). This is indicated in the
-   first two formats by the inclusion of "GMT" as the three-letter
-   abbreviation for time zone, and MUST be assumed when reading the
-   asctime format. HTTP-date is case sensitive and MUST NOT include
-   additional LWS beyond that specifically included as SP in the
-   grammar.
+All HTTP date/time stamps MUST be represented in Greenwich Mean Time
+(GMT), without exception. For the purposes of HTTP, GMT is exactly
+equal to UTC (Coordinated Universal Time). This is indicated in the
+first two formats by the inclusion of "GMT" as the three-letter
+abbreviation for time zone, and MUST be assumed when reading the
+asctime format. HTTP-date is case sensitive and MUST NOT include
+additional LWS beyond that specifically included as SP in the
+grammar.
 |#
-(define rfc1123:date-template "~a, ~d ~b ~Y ~H:~M:~S GMT")
-(define rfc850:date-template "~A, ~d-~b-~y ~H:~M:~S GMT")
-(define asctime:date-template "~a ~b ~e ~H:~M:~S ~Y")
+#;(define rfc1123:date-template "~a, ~d ~b ~Y ~H:~M:~S GMT")
+#;(define rfc850:date-template "~A, ~d-~b-~y ~H:~M:~S GMT")
+#;(define asctime:date-template "~a ~b ~e ~H:~M:~S ~Y")
 
+(define (date->rfc1123-string the-date)
+  (define (display-padded-number n out)
+    (if (< n 10)
+        (fprintf out "0~a" n)
+        (display n out)))
+  (match-define (date second minute hour day month year week-day _year-day _dst? _tz-offset)
+    the-date)
+  (let ([out (open-output-string)])
+    (write-string
+     (case week-day
+       [(0) "Sun"]
+       [(1) "Mon"]
+       [(2) "Tue"]
+       [(3) "Wed"]
+       [(4) "Thu"]
+       [(5) "Fri"]
+       [(6) "Sat"]
+       [else (error 'date->rfc1123-string "invalid week-day: ~s" week-day)])
+     out)
+    (display ", " out)
+    (display-padded-number day out)
+    (display " " out)
+    (write-string
+     (case month
+       [(1) "Jan"]
+       [(2) "Feb"]
+       [(3) "Mar"]
+       [(4) "Apr"]
+       [(5) "May"]
+       [(6) "Jun"]
+       [(7) "Jul"]
+       [(8) "Aug"]
+       [(9) "Sep"]
+       [(10) "Oct"]
+       [(11) "Nov"]
+       [(12) "Dec"]
+       [else (error 'date->rfc1123-string "invalid month: ~s" month)])
+     out)
+    (display " " out)
+    (display year out)
+    (display " " out)
+    (display-padded-number hour out)
+    (display ":" out)
+    (display-padded-number minute out)
+    (display ":" out)
+    (display-padded-number second out)
+    (display " GMT" out)
+    (get-output-string out)))
+
+(module+ private
+  (provide date->rfc1123-string))

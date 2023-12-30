@@ -1,21 +1,19 @@
 #lang racket/base
 
-(require racket/contract
+(require net/url ; used in path matching
+         racket/bytes
+         racket/contract/base
          racket/class ; for cookie-jar interface & class
+         (only-in racket/date date->seconds)
          racket/list
          racket/match
-         (only-in racket/bytes bytes-join) ; for building the Cookie: header
-         srfi/19
+         racket/string
          "common.rkt"
          ;web-server/http/request-structs
          ; The above is commented out because, although it'd be clean to reuse
          ; header structs, I don't want to create a dependency on the
          ; web-server-lib package. I'm leaving it in as comments, in case
          ; net/head acquires a similar facility at some point.
-         net/url ; used in path matching
-         (only-in racket/date date->seconds)
-         (only-in racket/string string-join string-trim string-split)
-         (only-in srfi/13 string-index-right)
          )
 
 (struct ua-cookie [name value domain path
@@ -23,57 +21,56 @@
                         persistent? host-only? secure-only? http-only?]
   #:transparent)
 
-(provide (contract-out
-          (struct ua-cookie ([name            cookie-name?]
-                             [value           cookie-value?]
-                             [domain          domain-value?]
-                             [path            path/extension-value?]
-                             [expiration-time integer?]
-                             [creation-time   (and/c integer? positive?)]
-                             [access-time     (and/c integer? positive?)]
-                             [persistent?     boolean?]
-                             [host-only?      boolean?]
-                             [secure-only?    boolean?]
-                             [http-only?      boolean?]))
+(provide
+ (contract-out
+  (struct ua-cookie ([name            cookie-name?]
+                     [value           cookie-value?]
+                     [domain          domain-value?]
+                     [path            path/extension-value?]
+                     [expiration-time integer?]
+                     [creation-time   (and/c integer? positive?)]
+                     [access-time     (and/c integer? positive?)]
+                     [persistent?     boolean?]
+                     [host-only?      boolean?]
+                     [secure-only?    boolean?]
+                     [http-only?      boolean?]))
 
-          [extract-and-save-cookies!
-           (->* ((or/c (listof (cons/c bytes? bytes?))
-                       (listof bytes?))
-                 url?)
-                ((-> bytes? string?))
-               void?)]
-          [save-cookie! (->* (ua-cookie?) (boolean?) void?)]
-          [cookie-header (->* (url?)
-                              ((-> string? bytes?)
-                               #:filter-with (-> ua-cookie? boolean?))
-                              (or/c bytes? #f))]
+  [extract-and-save-cookies!
+   (->* ((or/c (listof (cons/c bytes? bytes?))
+               (listof bytes?))
+         url?)
+        ((-> bytes? string?))
+        void?)]
+  [save-cookie! (->* (ua-cookie?) (boolean?) void?)]
+  [cookie-header (->* (url?)
+                      ((-> string? bytes?)
+                       #:filter-with (-> ua-cookie? boolean?))
+                      (or/c bytes? #f))]
 
-          [cookie-expired? (->* (ua-cookie?) ((and/c integer? positive?))
-                                boolean?)]
-          [current-cookie-jar (parameter/c (is-a?/c cookie-jar<%>))]
-          [list-cookie-jar% 
-           (class/c [save-cookies! (->*m ((listof ua-cookie?)) (boolean?) void?)]
-                    [save-cookie!  (->*m (ua-cookie?)          (boolean?) void?)]
-                    [cookies-matching
-                     (->*m (url?) (boolean?) (listof ua-cookie?))])]
+  [cookie-expired? (->* (ua-cookie?) ((and/c integer? positive?))
+                        boolean?)]
+  [current-cookie-jar (parameter/c (is-a?/c cookie-jar<%>))]
+  [list-cookie-jar%
+   (class/c [save-cookies! (->*m ((listof ua-cookie?)) (boolean?) void?)]
+            [save-cookie!  (->*m (ua-cookie?)          (boolean?) void?)]
+            [cookies-matching
+             (->*m (url?) (boolean?) (listof ua-cookie?))])]
 
-          [extract-cookies
-           (->* ((or/c (listof (cons/c bytes? bytes?))
-                       (listof bytes?))
-                 ;(listof (or/c header? (cons/c bytes? bytes?)))
-                 url?)
-                ((-> bytes? string?))
-                (listof ua-cookie?))]
-          [parse-cookie (->* (bytes? url?) ((-> bytes? string?)) (or/c ua-cookie? #f))]
+  [extract-cookies
+   (->* ((or/c (listof (cons/c bytes? bytes?))
+               (listof bytes?))
+         ;(listof (or/c header? (cons/c bytes? bytes?)))
+         url?)
+        ((-> bytes? string?))
+        (listof ua-cookie?))]
+  [parse-cookie (->* (bytes? url?) ((-> bytes? string?)) (or/c ua-cookie? #f))]
 
-          [default-path (-> url? string?)]
+  [default-path (-> url? string?)]
 
-          [min-cookie-seconds (and/c integer? negative?)]
-          [max-cookie-seconds (and/c integer? positive?)]
-          [parse-date    (-> string? (or/c date? #f))]
-          )
-         cookie-jar<%>
-         )
+  [min-cookie-seconds (and/c integer? negative?)]
+  [max-cookie-seconds (and/c integer? positive?)]
+  [parse-date (-> string? (or/c date? #f))])
+ cookie-jar<%>)
 
 ;;;;;;;;;;;;;;;;;;;;; Storing Cookies ;;;;;;;;;;;;;;;;;;;;;
 
@@ -182,7 +179,7 @@
              [(cookie-ok? (car jar))
               (cons (car jar) (insert-into (cdr jar)))]
              [else (insert-into (cdr jar))])])))
-    
+
     ;; String^3 (listof ua-cookie) -> (maybe ua-cookie)
     ;; produces all cookies in jar that do not have the given combo of name/dom/path
     (define (remove-cookie-matching name dom path jar)
@@ -248,10 +245,10 @@
   (let/ec esc
     (define (ignore-this-Set-Cookie) (esc #f))
     (define now (current-seconds))
-    
+
     (match-define (list-rest nvpair unparsed-attributes)
       (string-split (decode set-cookie-bytes) ";"))
-    
+
     (define-values (name value)
       (match (regexp-match nvpair-regexp nvpair)
         [(list all "" v) (ignore-this-Set-Cookie)]
@@ -260,7 +257,7 @@
 
     ;;; parsing the unparsed-attributes
     (define-values (domain-attribute path expires max-age secure? http-only?)
-      (parse-cookie-attributes unparsed-attributes url))   
+      (parse-cookie-attributes unparsed-attributes url))
 
     (define-values (host-only? domain)
       (let ([request-host (url-host url)])
@@ -454,6 +451,11 @@
 
 ;;;; As spec'd in section 5.1.4:
 
+(define (string-index-right s c)
+  (for/first ([idx (in-range (sub1 (string-length s)) -1 -1)]
+              #:when (eqv? (string-ref s idx) c))
+    idx))
+
 ;; url? -> string?
 ;; compute the default-path of a cookie, for use in creating the ua-cookie struct
 ;; when parsing a Set-Cookie header.
@@ -486,11 +488,9 @@
       [(url? url)    (url-full-path url)]))
   (define cookie-len (string-length cookie-path))
   (define request-path-len (string-length request-path))
-  
+
   (and (<= cookie-len request-path-len)
        (string=? (substring request-path 0 cookie-len) cookie-path)
        (or (char=? (string-ref cookie-path (sub1 cookie-len)) #\/)
            (and (< cookie-len request-path-len)
                 (char=? (string-ref request-path cookie-len) #\/)))))
-
-
