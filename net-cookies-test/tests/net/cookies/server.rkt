@@ -2,7 +2,9 @@
 
 (require net/cookies/server
          (submod net/cookies/server private)
+         (only-in net/cookies/user-agent parse-date)
          racket/date
+         rackcheck
          rackunit)
 
 ;; Based on tests from original net/cookie (JBM, 2006-12-01)
@@ -186,17 +188,30 @@
   (contract-test (make-cookie "x" "y" #:domain ".bad-domain;com")))
 
 (define-test-suite date-tests
-  (let ([table '(((1992  5 29 23 59  9) "Fri, 29 May 1992 23:59:09 GMT")
-                 ((1992  2 29 10  0 30) "Sat, 29 Feb 1992 10:00:30 GMT")
-                 ((2023 12 24  9 45  5) "Sun, 24 Dec 2023 09:45:05 GMT")
-                 ((2023 12 27 18 19  0) "Wed, 27 Dec 2023 18:19:00 GMT"))])
-    (for ([test (in-list table)])
-      (define seconds
-        (apply find-seconds
-               (append
-                (reverse (car test))
-                (list #f))))
-      (check-equal?
-       (date->rfc1123-string
-        (seconds->date seconds #f))
-       (cadr test)))))
+  (test-case "example tests"
+    (let ([table '(((1992  5 29 23 59  9) "Fri, 29 May 1992 23:59:09 GMT")
+                   ((1992  2 29 10  0 30) "Sat, 29 Feb 1992 10:00:30 GMT")
+                   ((2023 12 24  9 45  5) "Sun, 24 Dec 2023 09:45:05 GMT")
+                   ((2023 12 27 18 19  0) "Wed, 27 Dec 2023 18:19:00 GMT"))])
+      (for ([test (in-list table)])
+        (define seconds
+          (apply find-seconds
+                 (append
+                  (reverse (car test))
+                  (list #f))))
+        (check-equal?
+         (date->rfc1123-string
+          (seconds->date seconds #f))
+         (cadr test)))))
+
+  (test-case "roundtrip property tests"
+    (define gen:date
+      (gen:let ([seconds (gen:integer-in 0 (current-seconds))])
+        (seconds->date seconds #f)))
+    (check-property
+     (property ([a-date gen:date])
+       ;; a-date: date*
+       ;; parse-date: string -> date
+       (define seconds (date->seconds a-date #f))
+       (define rt-seconds (date->seconds (parse-date (date->rfc1123-string a-date)) #f))
+       (check-equal? seconds rt-seconds)))))
