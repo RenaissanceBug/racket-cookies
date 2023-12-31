@@ -16,8 +16,19 @@
 
 ;; cookie-name? : Any -> Bool
 ;; true iff s is a token, per RFC6265; see below
+(define control-characters
+  (apply string (cons
+                 (integer->char 127)
+                 (for/list ([code (in-range 0 32)])
+                   (integer->char code)))))
 (define cookie-name-re
-  (pregexp (format "^[^~a]+$" (regexp-quote "()<>@,;:\\\"/[]?={} \t"))))
+  (pregexp
+   (format
+    "^[^~a]+$"
+    (regexp-quote
+     (string-append
+      control-characters
+      "()<>@,;:\\\"/[]?={} ")))))
 
 (define (cookie-name? s)
   (regexp-match? cookie-name-re s))
@@ -58,15 +69,13 @@
        (regexp-match? av-octets-re x)))
 
 (define av-octets-re
-  (pregexp (format "^[^~a]*$" (regexp-quote
-                               (string-append
-                                (apply
-                                 string
-                                 (cons
-                                  (integer->char 127)
-                                  (for/list ([code (in-range 0 32)])
-                                    (integer->char code))))
-                                "#\\;")))))
+  (pregexp
+   (format
+    "^[^~a]*$"
+    (regexp-quote
+     (string-append
+      control-characters
+      "#\\;")))))
 
 
 ;; Per RFC1034.3.5 (with the RFC1123 revision to allow domain name

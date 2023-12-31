@@ -29,7 +29,7 @@
   (test-cookie-pred "cookie names" cookie-name? #t
     (valid "HI" "hi" "Hi" "modestlyLongCookieName"
            "somewhatTremendouslyOverlongCookieNameThatTakesAWhileToType")
-    (invalid "(ugh)" "\"" "\"argh\"" "<tags>" "foo@bar"
+    (invalid "\0" "hello\n" "\t" "\u7F" "(ugh)" "\"" "\"argh\"" "<tags>" "foo@bar"
              ",,,,,chameleon" "this;that" "this:that" "[bracketed]" "{braced}"
              "slashed/" "back\\slashed" "what?" "x=y" "spaced out" "\ttabbed")))
 
