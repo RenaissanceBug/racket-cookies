@@ -45,7 +45,7 @@
      (cookie-value?* value)]))
 
 (define cookie-value-re
-  (pregexp (format "^[~a0-9A-Za-z\\-]*$" (regexp-quote "()!#$%&'*+./:<=>?@[]^_{|}~"))))
+  (pregexp (format "^[~a0-9A-Za-z\\-]*$" (regexp-quote "()!#$%&'*+./:<=>?@[]^_{|}~`"))))
 (define (cookie-value?* value)
   (regexp-match? cookie-value-re value))
 

@@ -35,7 +35,7 @@
 
 (define-test-suite cookie-value-tests
   (test-cookie-pred "cookie values" cookie-value? #t
-    (valid "value" "(" "!" ")" ")!" "(!" "(!)" "!)" "\"hey!\"" "a=b=c")
+    (valid "value" "(" "!" ")" ")!" "(!" "(!)" "!)" "\"hey!\"" "a=b=c" "`a")
     (invalid "a;b" "a,b" "a b" "a\tb" "a=\"foo\"")))
 
 (define-test-suite p/e-value-tests
