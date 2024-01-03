@@ -29,13 +29,13 @@
   (test-cookie-pred "cookie names" cookie-name? #t
     (valid "HI" "hi" "Hi" "modestlyLongCookieName"
            "somewhatTremendouslyOverlongCookieNameThatTakesAWhileToType")
-    (invalid "(ugh)" "\"" "\"argh\"" "<tags>" "foo@bar"
+    (invalid "\0" "hello\n" "\t" "\u7F" "(ugh)" "\"" "\"argh\"" "<tags>" "foo@bar"
              ",,,,,chameleon" "this;that" "this:that" "[bracketed]" "{braced}"
              "slashed/" "back\\slashed" "what?" "x=y" "spaced out" "\ttabbed")))
 
 (define-test-suite cookie-value-tests
   (test-cookie-pred "cookie values" cookie-value? #t
-    (valid "value" "(" "!" ")" ")!" "(!" "(!)" "!)" "\"hey!\"" "a=b=c")
+    (valid "value" "(" "!" ")" ")!" "(!" "(!)" "!)" "\"hey!\"" "a=b=c" "`a")
     (invalid "a;b" "a,b" "a b" "a\tb" "a=\"foo\"")))
 
 (define-test-suite p/e-value-tests
