@@ -10,6 +10,7 @@
 
 (define build-deps
   '("net-cookies-lib"
+    "rackcheck-lib"
     "rackunit-lib"))
 
 (define update-implies '("net-cookies-lib"))

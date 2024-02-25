@@ -1,0 +1,20 @@
+on: push
+name: CI
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        racket-version:
+          - stable
+          - current
+    steps:
+    - uses: actions/checkout@master
+    - uses: Bogdanp/setup-racket@v1.11
+      with:
+        architecture: 'x64'
+        distribution: 'full'
+        version: ${{ matrix.racket-version }}
+    - run: sudo raco pkg update net-cookies{-lib,-doc,}/
+    - run: raco pkg install --auto net-cookies-test/
+    - run: raco test -x -p net-cookies
