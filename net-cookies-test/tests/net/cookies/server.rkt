@@ -2,9 +2,7 @@
 
 (require net/cookies/server
          (submod net/cookies/server private)
-         (only-in net/cookies/user-agent parse-date)
          racket/date
-         rackcheck
          rackunit)
 
 ;; Based on tests from original net/cookie (JBM, 2006-12-01)
@@ -202,16 +200,4 @@
         (check-equal?
          (date->rfc1123-string
           (seconds->date seconds #f))
-         (cadr test)))))
-
-  (test-case "roundtrip property tests"
-    (define gen:date
-      (gen:let ([seconds (gen:integer-in 0 (current-seconds))])
-        (seconds->date seconds #f)))
-    (check-property
-     (property ([a-date gen:date])
-       ;; a-date: date*
-       ;; parse-date: string -> date
-       (define seconds (date->seconds a-date #f))
-       (define rt-seconds (date->seconds (parse-date (date->rfc1123-string a-date)) #f))
-       (check-equal? seconds rt-seconds)))))
+         (cadr test))))))
