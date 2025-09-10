@@ -791,6 +791,7 @@
                 test-example-url)))
   
   ;; Cookie parsing failures:
+  (test-false "empty Set-Cookie header" (parse-cookie #"" example-url))
   (test-false "no equals in nvpair" (parse-cookie #"foo" example-url))
   (test-false "no equals in nvpair" (parse-cookie #"foo;" example-url))
   (test-false "no cookie name" (parse-cookie #"=foo" example-url))

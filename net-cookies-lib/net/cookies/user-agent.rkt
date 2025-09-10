@@ -246,8 +246,11 @@
     (define (ignore-this-Set-Cookie) (esc #f))
     (define now (current-seconds))
 
-    (match-define (list-rest nvpair unparsed-attributes)
-      (string-split (decode set-cookie-bytes) ";"))
+    (define attributes (string-split (decode set-cookie-bytes) ";"))
+    (when (null? attributes)
+      (ignore-this-Set-Cookie))
+
+    (match-define (list-rest nvpair unparsed-attributes) attributes)
 
     (define-values (name value)
       (match (regexp-match nvpair-regexp nvpair)
