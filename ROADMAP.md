@@ -4,8 +4,8 @@
 
 ### 1. Common predicate
 
-- [ ] `common.rkt`: add `same-site-value?` predicate
-- [ ] Docs: document `same-site-value?`
+- [X] `common.rkt`: add `same-site-value?` predicate
+- [X] Docs: document `same-site-value?`
 
 ### 2. Server
 

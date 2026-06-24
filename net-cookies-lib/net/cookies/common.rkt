@@ -9,7 +9,8 @@
   [cookie-name? (-> any/c boolean?)]
   [cookie-value? (-> any/c boolean?)]
   [path/extension-value? (-> any/c boolean?)]
-  [domain-value? (-> any/c boolean?)]))
+  [domain-value? (-> any/c boolean?)]
+  [samesite-value? (-> any/c boolean?)]))
 
 
 ;;;;;;;;; Cookie names ;;;;;;;;;
@@ -98,6 +99,15 @@
          (and (not (null? parts))
               (for/and ([part parts])
                 (regexp-match domain-label-rx part))))
+       #t))
+
+;; Test if x is a valid value for the SameSite field. From RFC6265bis §4.1.1:
+;; samesite-value    = "Strict" / "Lax" / "None"
+;; Note that this is case-sensitive, but the UA matches case-insensitively
+;; per §5.6.7.
+(define (samesite-value? x)
+  (and (string? x)
+       (for/or ([s '("Strict" "Lax" "None")]) (string=? x s))
        #t))
 
 ;;;; Underlying charsets

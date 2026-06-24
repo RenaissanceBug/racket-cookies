@@ -82,6 +82,14 @@ name, as defined by RFCs 1034 (Section 3.5) @cite["RFC1034"] and 1123
 (Section 2.1) @cite["RFC1123"].
 }
 
+@defproc[(samesite-value? [v any/c])
+         boolean?]{
+Returns @racket[#t] iff @racket[v] is a string that contains a value that
+@cite["RFC6265bis"] §4.1.1 permits a server to use for the @racket["SameSite"]
+attribute in a ``Set-Cookie'' response header. There are only three such
+values: @racket["Strict"], @racket["Lax"], and @racket["None"].
+}
+
 @; ------------------------------------------
 
 @section[#:tag "cookies-server-procs"]{Cookies and HTTP Servers}
