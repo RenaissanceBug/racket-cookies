@@ -3,6 +3,7 @@
 (require net/cookies/server
          (submod net/cookies/server private)
          racket/date
+         racket/logging ; for with-logging-to-port
          rackunit)
 
 ;; Based on tests from original net/cookie (JBM, 2006-12-01)
@@ -86,6 +87,13 @@
                       #:extension
                       "Comment=the \"risks\" involved in waking")
          "a=b; Comment=the \"risks\" involved in waking")
+  (ctest "test each modifier individually: same-site 'strict"
+         (make-cookie "x" "y" #:same-site 'strict)
+         "x=y; SameSite=Strict")
+  (ctest "test each modifier individually: same-site 'lax"
+         (make-cookie "x" "y" #:same-site 'lax)
+         "x=y; SameSite=Lax")
+
   (ctest "test each modifier individually: extension"
          (make-cookie "x" "y" #:extension "Version=12")
          "x=y; Version=12")
@@ -93,11 +101,62 @@
          (make-cookie "x" "y" #:extension "Omega=Lx.(x x) Lx.(x x)")
          "x=y; Omega=Lx.(x x) Lx.(x x)")
 
+  (let ([op (open-output-string)])
+    (test-suite "test each modifier individually: same-site 'none w/o secure triggers warning"
+                (with-logging-to-port op
+                  (λ ()
+                    (ctest "test each modifier individually: same-site 'none"
+                           (make-cookie "x" "y" #:same-site 'none)
+                           "x=y; SameSite=None"))
+                  'warning)
+                (test-case
+                 "make-cookie: SameSite=None without Secure issues warning to log"
+                 (check-not-equal? (get-output-string op) ""))))
+  (let ([op (open-output-string)])
+    (test-suite "test combinations: same-site 'none w secure explicitly #f"
+                (with-logging-to-port op
+                  (λ ()
+                    (ctest "test each modifier individually: same-site 'none"
+                           (make-cookie "x" "y" #:same-site 'none #:secure? #f)
+                           "x=y; SameSite=None"))
+                  'warning)
+                (test-case
+                 "make-cookie: SameSite=None without Secure issues warning to log"
+                 (check-not-equal? (get-output-string op) ""))))
+  
   (ctest "test combinations: ext/domain"
          (make-cookie "m" "n"
                       #:extension "Comment=set+a+to+b"
                       #:domain "example.net")
          "m=n; Domain=example.net; Comment=set+a+to+b")
+  (ctest "test combinations: domain/same-site"
+         (make-cookie "a" "b"
+                      #:domain "example.com"
+                      #:same-site 'strict)
+         "a=b; Domain=example.com; SameSite=Strict")
+  (ctest "test combinations: domain/same-site"
+         (make-cookie "a" "b"
+                      #:domain "example.net"
+                      #:same-site 'lax)
+         "a=b; Domain=example.net; SameSite=Lax")
+  (ctest "test combinations: domain/same-site/secure"
+         (make-cookie "a" "b"
+                      #:domain "example.com"
+                      #:same-site 'strict
+                      #:secure? #t)
+         "a=b; Domain=example.com; Secure; SameSite=Strict")
+  (ctest "test combinations: domain/same-site/secure"
+         (make-cookie "a" "b"
+                      #:domain "example.com"
+                      #:same-site 'lax
+                      #:secure? #t)
+         "a=b; Domain=example.com; Secure; SameSite=Lax")
+  (ctest "test combinations: domain/same-site/secure"
+         (make-cookie "a" "b"
+                      #:domain "example.com"
+                      #:same-site 'none
+                      #:secure? #t)
+         "a=b; Domain=example.com; Secure; SameSite=None")
   (ctest "test combinations: max-age/secure"
          (make-cookie "m" "n"
                       #:max-age 300

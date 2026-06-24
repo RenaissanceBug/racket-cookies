@@ -18,6 +18,7 @@
      [path       (or/c path/extension-value? #f)]
      [secure?    boolean?]
      [http-only? boolean?]
+     [same-site  (or/c 'strict 'lax 'none #f)]
      [extension  (or/c path/extension-value? #f)])
     #:omit-constructor)
   [make-cookie
@@ -28,6 +29,7 @@
          #:path       (or/c path/extension-value? #f)
          #:secure?    boolean?
          #:http-only? boolean?
+         #:same-site  (or/c 'strict 'lax 'none #f)
          #:extension  (or/c path/extension-value? #f))
         cookie?)]
 
@@ -47,7 +49,7 @@
 
 
 (serializable-struct cookie
-  [name value expires max-age domain path secure? http-only? extension]
+  [name value expires max-age domain path secure? http-only? same-site extension]
   #:transparent)
 
 (define (make-cookie name value
@@ -57,10 +59,13 @@
                      #:path       [path #f]
                      #:secure?    [secure? #f]
                      #:http-only? [http-only? #f]
+                     #:same-site  [same-site #f]
                      #:extension  [extension #f])
   (define (convert x)
     (if (bytes? x) (bytes->string/utf-8 x) x))
-  (cookie (convert name) (convert value) expires max-age domain path secure? http-only? extension))
+  (when (and (not secure?) (eq? same-site 'none))
+    (log-warning "non-Secure cookie with SameSite=None will be ignored by browsers"))
+  (cookie (convert name) (convert value) expires max-age domain path secure? http-only? same-site extension))
 
 ;; cookie -> String
 ;; produce a Set-Cookie header suitable for sending to a client
@@ -107,7 +112,7 @@
 (define (cookie->string c)
   (define (maybe-format fmt val) (and val (format fmt val)))
   (match c
-    [(cookie name value expires max-age domain path secure? http-only? extension)
+    [(cookie name value expires max-age domain path secure? http-only? same-site extension)
      (string-join
       (filter values
               (list (format "~a=~a" name value)
@@ -117,6 +122,11 @@
                     (maybe-format "Path=~a" path)
                     (and secure? "Secure")
                     (and http-only? "HttpOnly")
+                    (and same-site (format "SameSite=~a"
+                                           (case same-site
+                                             [(strict) "Strict"]
+                                             [(lax)    "Lax"]
+                                             [(none)   "None"])))
                     extension))
       "; ")]
     [_ (error 'cookie->string "expected a cookie; received: ~a" c)]))
