@@ -111,6 +111,7 @@ is for handling cookies on the server side; it includes:
                    [path       (or/c path/extension-value? #f)]
                    [secure?    boolean?]
                    [http-only? boolean?]
+                   [same-site  (or/c 'strict 'lax 'none #f)]
                    [extension  (or/c path/extension-value? #f)])
                   #:omit-constructor]{
   A structure type for cookies the server will send to the user agent. For
@@ -128,6 +129,7 @@ is for handling cookies on the server side; it includes:
                       [#:path       path     (or/c path/extension-value? #f) #f]
                       [#:secure?    secure?  boolean? #f]
                       [#:http-only? http-only? boolean? #f]
+                      [#:same-site  same-site (or/c 'strict 'lax 'none #f)]
                       [#:extension extension (or/c path/extension-value? #f)
                                    #f])
          cookie?]{
@@ -168,6 +170,25 @@ to JavaScript code.
 (Some older browsers do not support this flag; see
 @hyperlink["https://www.owasp.org/index.php/HttpOnly"]{the OWASP page on
 HttpOnly} for more info.)
+
+@racket[same-site], specified in @cite[RFC6265bis], tells the client
+when to enforce the rule that cookies must only be sent with same-site
+requests. It exists to defend against CSRF attacks by specifying if and when
+this cookie may be sent with cross-site requests.
+  @itemlist[@item{@racket['strict] restricts this cookie to requests originating from the same site that sets it}
+            @item{@racket['lax] differs from @racket['strict] by sending the cookie with a cross-site request iff the request is for a top-level navigation via a safe HTTP method}
+            @item{@racket['none] allows this cookie to be sent with cross-site requests}]
+@bold{Warning:}
+Setting @racket[same-site] to @racket['none] requires also setting
+@racket[secure?] to @racket[#t]. As of this writing, major browsers silently
+reject cookies having @bold{SameSite=None} without @bold{Secure}. If you call
+@racket[make-cookie] with @racket[#:same-site 'none] and @racket[#:secure? #f],
+this library will permit constructing the cookie, but emit a warning with
+@racket[log-warning].
+
+See @hyperlink["https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Cookies#controlling_third-party_cookies_with_samesite"]{MDN's
+documentation on cookies} for further discussion of the @tt{"SameSite"}
+attribute.
 }
 
 @defproc[(cookie->set-cookie-header [c cookie?]) bytes?]{
@@ -236,7 +257,19 @@ HttpOnly} for more info.)
              (make-cookie "favColor" "teal"
                           #:max-age 86400
                           #:domain "example.com"
-                          #:secure? #t))]
+                          #:secure? #t))
+            (cookie->string
+             (make-cookie "user" "racketeer"
+                          #:max-age 3600
+                          #:domain "example.net"
+                          #:secure? #t
+                          #:same-site 'strict))
+            (cookie->string
+             (make-cookie "foo" "bar"
+                          #:max-age 3600
+                          #:domain "example.net"
+                          #:secure? #t
+                          #:same-site 'lax))]
 }
 
 @; ------------------------------------------
