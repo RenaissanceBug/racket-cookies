@@ -18,7 +18,7 @@
 @author[(author+email "Jordan Johnson" "jmj@fellowhuman.com")]
 
 This library provides utilities for handling cookies as specified
-in RFC 6265 @cite["RFC6265"].
+in RFC 6265 @cite["RFC6265"] and its 2023 update @cite["RFC6265bis"].
 
 @defmodule[net/cookies]{
   Provides all names exported from @racketmodname[net/cookies/common],
@@ -498,18 +498,26 @@ other cookie components.
              #:location "RFC"
              #:url "http://tools.ietf.org/html/rfc1034.html"
              #:date "1987")
-  
+
   (bib-entry #:key "RFC1123"
              #:title "Requirements for Internet Hosts - Application and Support"
              #:author "R. Braden (editor)"
              #:location "RFC"
              #:url "http://tools.ietf.org/html/rfc1123.html"
              #:date "1989")
-  
+
   (bib-entry #:key "RFC6265"
              #:title "HTTP State Management Mechanism"
              #:author "A. Barth"
              #:location "RFC"
              #:url "http://tools.ietf.org/html/rfc6265.html"
              #:date "2011")
+
+  ;; TODO update the following #:key, #:location, #:url if/when the RFC status changes:
+  (bib-entry #:key "RFC6265bis"
+             #:title "Cookies: HTTP State Management Mechanism"
+             #:author "S. Bingler, M. West, J. Wilander"
+             #:location "Internet-Draft"
+             #:url "https://httpwg.org/http-extensions/draft-ietf-httpbis-rfc6265bis.html"
+             #:date "2023")
   )
