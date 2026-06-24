@@ -46,4 +46,9 @@
            "You're so \"cool\"")
     (invalid "x;y" "\000" (string #\rubout))))
 
+(define-test-suite samesite-value-tests
+  (test-cookie-pred "samesite values" samesite-value? #f
+    (valid "Strict" "Lax" "None" "strict" "lax" "none" "laX")
+    (invalid "spork" "00" "enoN")))
+
 (module+ test (require (submod ".." main))) ; for raco test & drdr

@@ -82,12 +82,18 @@ name, as defined by RFCs 1034 (Section 3.5) @cite["RFC1034"] and 1123
 (Section 2.1) @cite["RFC1123"].
 }
 
-@defproc[(samesite-value? [v any/c])
+@defproc[(samesite-value? [v any/c]
+                          [#:ignore-case? ignore-case? boolean? #t])
          boolean?]{
-Returns @racket[#t] iff @racket[v] is a string that contains a value that
-@cite["RFC6265bis"] §4.1.1 permits a server to use for the @racket["SameSite"]
-attribute in a ``Set-Cookie'' response header. There are only three such
-values: @racket["Strict"], @racket["Lax"], and @racket["None"].
+Returns @racket[#t] iff @racket[v] is a string that contains a value for
+@cite["RFC6265bis"] §4.1.1's @racket["SameSite"]
+attribute in a ``Set-Cookie'' response header.
+
+There are only three such values: @racket["Strict"], @racket["Lax"], and
+@racket["None"]. However, since user agents match case-insensitively, this
+procedure defaults to case-insensitive matching (e.g.,
+@racket[(samesite-value? "LaX")] is @racket[#t]). It can be made
+case-sensitive with the optional keyword parameter.
 }
 
 @; ------------------------------------------
@@ -171,7 +177,7 @@ to JavaScript code.
 @hyperlink["https://www.owasp.org/index.php/HttpOnly"]{the OWASP page on
 HttpOnly} for more info.)
 
-@racket[same-site], specified in @cite[RFC6265bis], tells the client
+@racket[same-site], specified in @cite["RFC6265bis"], tells the client
 when to enforce the rule that cookies must only be sent with same-site
 requests. It exists to defend against CSRF attacks by specifying if and when
 this cookie may be sent with cross-site requests.
