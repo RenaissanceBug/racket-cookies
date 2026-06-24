@@ -9,7 +9,7 @@
 
 ### common.rkt
 
- * Consider adding a `same-site-value?` predicate
+ * DONE Consider adding a `same-site-value?` predicate
 
 ### server.rkt
 
@@ -87,7 +87,7 @@ Misc (later):
 
 ### common
 
- * Document `same-site-value?` predicate if added
+ * DONE Document `same-site-value?` predicate if added
 
 ### server
 
