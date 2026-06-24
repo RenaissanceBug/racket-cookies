@@ -9,19 +9,30 @@
 
 ### 2. Server
 
-- [ ] `server.rkt`: update `cookie` struct to add SameSite field (with default)
-- [ ] `server.rkt`: update `make-cookie` + contract with `#:same-site` keyword
-- [ ] `server.rkt`: update `cookie->string` to emit SameSite attribute
-- [ ] `server.rkt`: emit `log-warning` when SameSite=None and Secure=false
-- [ ] Tests: confirm all existing `make-cookie` calls are unaffected
-- [ ] Tests: add `make-cookie` tests exercising the new field
-- [ ] Tests: add `cookie->string` tests showing SameSite output
-- [ ] Tests: test warning is issued for SameSite=None + not Secure
-- [ ] Docs: document `#:same-site` param in `make-cookie`
-- [ ] Docs: document warning behaviour
-- [ ] Docs: document new possible output from `cookie->string`, add example
-- [ ] Docs: add MDN bibliography ref re SameSite=None without Secure
+- [X] `server.rkt`: update `cookie` struct to add SameSite field (with default)
+- [X] `server.rkt`: update `make-cookie` + contract with `#:same-site` keyword
+- [X] `server.rkt`: update `cookie->string` to emit SameSite attribute
+- [X] `server.rkt`: emit `log-warning` when SameSite=None and Secure=false
+- [X] Tests: confirm all existing `make-cookie` calls are unaffected
+- [X] Tests: add `make-cookie` tests exercising the new field
+- [X] Tests: add `cookie->string` tests showing SameSite output
+- [X] Tests: test warning is issued for SameSite=None + not Secure
+- [X] Docs: document `#:same-site` param in `make-cookie`
+- [X] Docs: document warning behaviour
+- [X] Docs: document new possible output from `cookie->string`, add example
+- [X] Docs: add MDN bibliography ref re SameSite=None without Secure
 - [ ] Bump version 1.2 → 1.3 and write changelog entry
+
+---
+
+## v1.4 — UA constructor migration (additive, no breaking changes)
+
+- [ ] `user-agent.rkt`: add `make-ua-cookie` function with keyword args mirroring all current `ua-cookie` fields
+- [ ] `user-agent.rkt`: add deprecation warning on direct `ua-cookie` construction
+- [ ] Tests: add `make-ua-cookie` construction tests
+- [ ] Docs: document `make-ua-cookie`
+- [ ] Docs: add deprecation notice for direct `ua-cookie` construction
+- [ ] Bump version 1.3 → 1.4 and write changelog entry
 
 ---
 
@@ -30,18 +41,17 @@
 ### 3. UA struct & constructor refactor
 
 - [ ] `user-agent.rkt`: add `same-site-enforcement` field to `ua-cookie` struct
-- [ ] `user-agent.rkt`: add `#:omit-constructor` to `ua-cookie` struct def
+- [ ] `user-agent.rkt`: add `#:omit-constructor` to `ua-cookie` struct def (completing the v1.4 deprecation)
 - [ ] `user-agent.rkt`: remove exposure of `#:mutable` field
-- [ ] `user-agent.rkt`: add `make-ua-cookie` with `#:same-site-enforcement` keyword
+- [ ] `user-agent.rkt`: add `#:same-site-enforcement` keyword to `make-ua-cookie` (added in v1.4)
 - [ ] `user-agent.rkt`: update all `ua-cookie` constructor calls throughout the lib
 - [ ] `user-agent.rkt`: update `match-define`s on `ua-cookie` (~lines 138/145)
 - [ ] `user-agent.rkt`: update `remove-cookie-matching` use of `match-lambda` (~line 187)
 - [ ] `user-agent.rkt`: update `cookie-matching` use of `match` (~line 199)
-- [ ] Tests: update all 63 `ua-cookie` constructor calls in test files
+- [ ] Tests: update all 63 `ua-cookie` constructor calls in test files (switch to `make-ua-cookie`)
 - [ ] Tests: update 4 `ua-cookie` match patterns (`check-cookie-with-approx-ctime/atime?` and `ua-cookie-matches` helpers)
-- [ ] Tests: add `make-ua-cookie` construction tests
 - [ ] Docs: document `same-site-enforcement` field in `ua-cookie`
-- [ ] Docs: document `make-ua-cookie`
+- [ ] Docs: update `make-ua-cookie` docs for new `#:same-site-enforcement` keyword
 - [ ] Docs: add `@history` note — `access-time` no longer mutable; `set-ua-cookie-access-time!` no longer provided
 
 ### 4. UA parsing
