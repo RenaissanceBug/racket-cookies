@@ -21,7 +21,7 @@
 - [X] Docs: document warning behaviour
 - [X] Docs: document new possible output from `cookie->string`, add example
 - [X] Docs: add MDN bibliography ref re SameSite=None without Secure
-- [ ] Bump version 1.2 → 1.3 and write changelog entry
+- [X] Bump version 1.2 → 1.3 and write changelog entry
 
 ---
 
