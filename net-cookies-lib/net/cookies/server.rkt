@@ -18,8 +18,19 @@
      [path       (or/c path/extension-value? #f)]
      [secure?    boolean?]
      [http-only? boolean?]
-     [same-site  (or/c 'strict 'lax 'none #f)]
      [extension  (or/c path/extension-value? #f)])
+    #:omit-constructor)
+  (struct cookie/same-site                            ; added in v1.3
+    ([name       (and/c string? cookie-name?)]
+     [value      (and/c string? cookie-value?)]
+     [expires    (or/c date? #f)]
+     [max-age    (or/c (and/c integer? positive?) #f)]
+     [domain     (or/c domain-value? #f)]
+     [path       (or/c path/extension-value? #f)]
+     [secure?    boolean?]
+     [http-only? boolean?]
+     [extension  (or/c path/extension-value? #f)]
+     [same-site  (or/c 'strict 'lax 'none #f)])       ; added in v1.3
     #:omit-constructor)
   [make-cookie
    (->* (cookie-name? cookie-value?)
@@ -31,7 +42,7 @@
          #:http-only? boolean?
          #:same-site  (or/c 'strict 'lax 'none #f)
          #:extension  (or/c path/extension-value? #f))
-        cookie?)]
+        cookie/same-site?)]
 
   [cookie->set-cookie-header (-> cookie? bytes?)]
   [clear-cookie-header
@@ -47,10 +58,13 @@
            (-> bytes? (-> bytes? X)
                (listof (cons/c X X))))]))
 
-
+; Pre-v1.3 cookies:
 (serializable-struct cookie
-  [name value expires max-age domain path secure? http-only? same-site extension]
+  [name value expires max-age domain path secure? http-only? extension]
   #:transparent)
+
+; v1.3 cookies:
+(serializable-struct cookie/same-site cookie [same-site] #:transparent)
 
 (define (make-cookie name value
                      #:expires    [expires #f]
@@ -65,7 +79,8 @@
     (if (bytes? x) (bytes->string/utf-8 x) x))
   (when (and (not secure?) (eq? same-site 'none))
     (log-warning "non-Secure cookie with SameSite=None will be ignored by browsers"))
-  (cookie (convert name) (convert value) expires max-age domain path secure? http-only? same-site extension))
+  (cookie/same-site (convert name) (convert value)
+                    expires max-age domain path secure? http-only? same-site extension))
 
 ;; cookie -> String
 ;; produce a Set-Cookie header suitable for sending to a client
@@ -112,7 +127,7 @@
 (define (cookie->string c)
   (define (maybe-format fmt val) (and val (format fmt val)))
   (match c
-    [(cookie name value expires max-age domain path secure? http-only? same-site extension)
+    [(cookie/same-site name value expires max-age domain path secure? http-only? same-site extension)
      (string-join
       (filter values
               (list (format "~a=~a" name value)
@@ -129,6 +144,17 @@
                                              [(none)   "None"])))
                     extension))
       "; ")]
+    ; Catch any pre-v1.3 cookie structs (should be impossible):
+    [(cookie name value expires max-age domain path secure? http-only? extension)
+     (log-warning "avoid pre-v1.3 cookies; use only make-cookie to create cookies")
+     (cookie->string (make-cookie name value
+                                  #:expires    expires
+                                  #:max-age    max-age
+                                  #:domain     domain
+                                  #:path       path
+                                  #:secure?    secure?
+                                  #:http-only? http-only?
+                                  #:extension  extension))]
     [_ (error 'cookie->string "expected a cookie; received: ~a" c)]))
 
 
