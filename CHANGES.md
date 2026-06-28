@@ -6,11 +6,7 @@
 
 - Added `make-ua-cookie`, a stable keyword-argument constructor for `ua-cookie`
   structs. Prefer this over calling the `ua-cookie` struct constructor directly.
-- Direct use of the `ua-cookie` struct constructor is now deprecated. It will be
-  removed in v2.0, when a new field will be added to `ua-cookie` that would make
-  positional construction a source of silent breakage.
-
----
+- Direct use of the `ua-cookie` struct constructor is now deprecated.
 
 ## v1.3
 
@@ -23,6 +19,9 @@
 - `make-cookie` accepts a new `#:same-site` keyword argument (a
   `same-site-value?` or `#f`, defaulting to `#f`). Existing calls are
   unaffected.
+- `make-cookie` and other procedures here now create and use
+  `cookie/same-site` (a subtype of `cookie`) instead of `cookie`, having an
+  additional `same-site` field.
 - `cookie->string` (and by extension `cookie->set-cookie-header`) now emits a
   `SameSite` attribute when the cookie's `same-site` field is set.
 - A `log-warning` is issued at cookie-creation time if `SameSite=None` is

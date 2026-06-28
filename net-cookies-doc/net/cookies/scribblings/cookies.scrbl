@@ -117,7 +117,7 @@ is for handling cookies on the server side; it includes:
   using this library should construct their @racket[cookie/same-site] structs via
   @racket[make-cookie], below.
 
-  @history[#:added "9.3"]
+  @history[#:added "1.3"]
 }
 
 @defstruct[cookie ([name       (and/c string? cookie-name?)]
@@ -210,7 +210,7 @@ See @hyperlink["https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Cookies
 documentation on cookies} for further discussion of the @tt{"SameSite"}
 attribute.
 
-  @history[#:changed "9.3" @elem{Added @racket[same-site] parameter.}]
+  @history[#:changed "1.3" @elem{Added @racket[same-site] parameter.}]
 }
 
 @defproc[(cookie->set-cookie-header [c cookie?]) bytes?]{

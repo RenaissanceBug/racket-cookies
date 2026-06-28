@@ -9,7 +9,7 @@
 
 ### 2. Server
 
-- [X] `server.rkt`: update `cookie` struct to add SameSite field (with default)
+- [X] `server.rkt`: add `cookie` subtype having SameSite field (with default)
 - [X] `server.rkt`: update `make-cookie` + contract with `#:same-site` keyword
 - [X] `server.rkt`: update `cookie->string` to emit SameSite attribute
 - [X] `server.rkt`: emit `log-warning` when SameSite=None and Secure=false
@@ -21,6 +21,7 @@
 - [X] Docs: document warning behaviour
 - [X] Docs: document new possible output from `cookie->string`, add example
 - [X] Docs: add MDN bibliography ref re SameSite=None without Secure
+- [X] Docs: add history & deprecation notes on structure types
 - [X] Bump version 1.2 → 1.3 and write changelog entry
 
 ---
