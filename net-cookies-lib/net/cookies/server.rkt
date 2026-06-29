@@ -80,7 +80,7 @@
   (when (and (not secure?) (eq? same-site 'none))
     (log-warning "non-Secure cookie with SameSite=None will be ignored by browsers"))
   (cookie/same-site (convert name) (convert value)
-                    expires max-age domain path secure? http-only? same-site extension))
+                    expires max-age domain path secure? http-only? extension same-site))
 
 ;; cookie -> String
 ;; produce a Set-Cookie header suitable for sending to a client
@@ -127,7 +127,7 @@
 (define (cookie->string c)
   (define (maybe-format fmt val) (and val (format fmt val)))
   (match c
-    [(cookie/same-site name value expires max-age domain path secure? http-only? same-site extension)
+    [(cookie/same-site name value expires max-age domain path secure? http-only? extension same-site)
      (string-join
       (filter values
               (list (format "~a=~a" name value)
